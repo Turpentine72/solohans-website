@@ -24,9 +24,26 @@ const app = express();
 // ─────────────────────────────────────────────────────────
 // Middleware
 // ─────────────────────────────────────────────────────────
+// Comma-separated list of allowed frontend origins, e.g.
+// CLIENT_URL=https://project-2e90d.vercel.app,https://yourdomain.com
+const allowedOrigins = [
+  'http://localhost:5173',
+  ...(process.env.CLIENT_URL || '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean),
+];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || '*',
+    origin: (origin, callback) => {
+      // Allow non-browser requests (curl, server-to-server, mobile apps)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      // Allow any Vercel preview/production deployment URL automatically
+      if (/\.vercel\.app$/.test(origin)) return callback(null, true);
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: true,
   })
 );
