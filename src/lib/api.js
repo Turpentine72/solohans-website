@@ -121,6 +121,7 @@ export const uploadFile = async (file, folder = 'uploads') => {
 // ─── SETTINGS ────────────────────────────────────────────────────────────────
 export const settingsApi = {
   get: () => request('/settings'),
+  getAdmin: () => request('/settings/admin'),
   update: (data) => request('/settings', { method: 'PUT', body: JSON.stringify(data) }),
 };
 

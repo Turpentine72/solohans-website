@@ -76,7 +76,7 @@ export default function Settings() {
 
   const fetchSettings = async () => {
     try {
-      const data = await settingsApi.get();
+      const data = await settingsApi.getAdmin();
       setGeneral({
         name: data.name || '',
         logo: data.logo || '',
