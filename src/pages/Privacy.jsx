@@ -20,7 +20,10 @@ export default function Privacy() {
 
   return (
     <>
-      <Helmet><title>Privacy Policy – Solohans</title></Helmet>
+      <Helmet>
+        <title>Privacy Policy – Solohans Delicious Meals | Food Delivery Lagos</title>
+        <meta name="description" content="Read the privacy policy for Solohans Delicious Meals. We are committed to protecting your personal information when you order Nigerian food online in Lagos." />
+      </Helmet>
       <div className="max-w-4xl mx-auto py-16 px-6">
         <Link to="/" className="text-[#C62828] hover:underline text-sm mb-8 inline-block">← Back to Home</Link>
         <h1 className="text-3xl font-bold mb-8">Privacy Policy</h1>

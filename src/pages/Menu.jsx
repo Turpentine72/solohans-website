@@ -121,7 +121,7 @@ const Menu = () => {
     <>
       <Helmet>
         <title>Menu – Solohans Delicious Meals, Surulere, Lagos</title>
-        <meta name="description" content="Explore our full menu: jollof rice, shawarma, pasta, burgers, desserts, and more. Freshly prepared and delivered in Surulere, Lagos." />
+        <meta name="description" content="Order Nigerian meals online – jollof rice, egusi soup, ogbono soup, fried rice, amala, eba, and more. Fresh food delivery in Lagos at affordable prices." />
         <meta name="keywords" content="Solohans menu, jollof rice Lagos, shawarma Surulere, pasta delivery Lagos, burgers, desserts Lagos" />
         <link rel="canonical" href="https://www.solohansmeals.com/menu" />
         <meta property="og:title" content="Menu – Solohans Delicious Meals" />

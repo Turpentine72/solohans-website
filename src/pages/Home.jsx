@@ -452,8 +452,8 @@ export default function Home() {
   return (
     <>
       <Helmet>
-        <title>Solohans Delicious Meals – Fresh & Tasty Food in Surulere, Lagos</title>
-        <meta name="description" content="Order fresh, delicious meals from Solohans Delicious Meals in Surulere, Lagos. Fast delivery, master chefs, and excellent service. Call +234 808 194 1298." />
+        <title>Solohans Delicious Meals – Food Delivery in Lagos | Nigerian Meals Near You</title>
+        <meta name="description" content="Order fresh Nigerian meals online in Lagos. Jollof rice, egusi soup, fried rice, amala, and more – affordable food delivery near you. Call +234 808 194 1298." />
         <meta name="keywords" content="restaurant Surulere Lagos, food delivery Lagos, fresh meals Lagos, Solohans Delicious Meals, Adeniran Ogunsanya Surulere" />
         <link rel="canonical" href="https://www.solohansmeals.com/" />
         <meta property="og:title" content="Solohans Delicious Meals – Surulere, Lagos" />

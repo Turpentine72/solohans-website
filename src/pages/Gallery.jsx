@@ -37,7 +37,13 @@ export default function Gallery() {
 
   return (
     <>
-      <Helmet><title>Gallery – Solohans</title></Helmet>
+      <Helmet>
+        <title>Food Gallery – Solohans Delicious Meals | Nigerian Food in Lagos</title>
+        <meta name="description" content="See our freshly prepared Nigerian meals – jollof rice, egusi soup, fried rice, and more. Browse the Solohans Delicious Meals food gallery and place your order today." />
+        <meta property="og:title" content="Food Gallery – Solohans Delicious Meals" />
+        <meta property="og:description" content="Fresh Nigerian meals made daily in Lagos. Browse our gallery and order now." />
+        <meta property="og:url" content="https://www.solohansdeliciousmeal.com.ng/gallery" />
+      </Helmet>
 
       {/* Hero Section – full screen like Menu page */}
       <section className="relative h-screen overflow-hidden">
