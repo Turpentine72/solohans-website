@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /track-order
+
+Sitemap: https://www.solohansdeliciousmeal.com.ng/sitemap.xml
