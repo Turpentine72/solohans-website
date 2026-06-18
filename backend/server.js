@@ -21,11 +21,11 @@ import galleryRoutes from './routes/gallery.js';
 
 const app = express();
 
+// ───────────────────────────────
 // Allowed Origins
+// ───────────────────────────────
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://www.solohansdeliciousmeal.com.ng',
-  'https://solohansdeliciousmeal.com.ng',
 
   ...(process.env.CLIENT_URL || '')
     .split(',')
@@ -33,20 +33,21 @@ const allowedOrigins = [
     .filter(Boolean),
 ];
 
+// ───────────────────────────────
 // CORS (ONLY ONCE)
+// ───────────────────────────────
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin) return callback(null, true);
-
-      if (
-        allowedOrigins.includes(origin) ||
-        /\.vercel\.app$/.test(origin)
-      ) {
+      if (!origin) {
         return callback(null, true);
       }
 
-      console.log('Blocked CORS Origin:', origin);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.log('Blocked Origin:', origin);
 
       return callback(
         new Error(`Origin not allowed: ${origin}`)
@@ -73,7 +74,9 @@ app.use(
 
 app.use(express.json());
 
+// ───────────────────────────────
 // Routes
+// ───────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/menu-items', menuItemRoutes);
 app.use('/api/categories', categoryRoutes);
@@ -90,35 +93,43 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/promos', promoRoutes);
 app.use('/api/gallery', galleryRoutes);
 
-// Health
+// ───────────────────────────────
+// Health Check
+// ───────────────────────────────
 app.get('/api/health', (req, res) => {
-  res.json({
+  res.status(200).json({
     status: 'ok',
     message: 'Solohans backend is running',
   });
 });
 
-// Start server
+// ───────────────────────────────
+// Start Server
+// ───────────────────────────────
 const PORT = process.env.PORT || 5000;
 
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
+    console.log('✅ MongoDB connected');
+
     app.listen(PORT, () => {
-      console.log(`🚀 Running on ${PORT}`);
+      console.log(`🚀 Server running on ${PORT}`);
     });
   })
   .catch((err) => {
-    console.error(err);
+    console.error('❌ MongoDB connection error:', err);
     process.exit(1);
   });
 
-// Error handler
+// ───────────────────────────────
+// Error Handler
+// ───────────────────────────────
 app.use((err, req, res, next) => {
   console.error(err);
 
   res.status(500).json({
     success: false,
-    message: err.message,
+    message: err.message || 'Internal Server Error',
   });
 });
