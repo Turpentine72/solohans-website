@@ -26,9 +26,6 @@ export const initializePaystack = ({
 
   const paystack = new PaystackPop();
 
-  // 🔍 THIS WILL PRINT THE REAL KEY TO THE CONSOLE
-  console.log('🔑 LIVE KEY CHECK:', PAYSTACK_PUBLIC_KEY);
-
   paystack.newTransaction({
     key: PAYSTACK_PUBLIC_KEY,
     email: email.trim(),
