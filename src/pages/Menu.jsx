@@ -28,7 +28,7 @@ const Menu = () => {
   const { activePromos } = usePromos();
 
   useEffect(() => {
-    const hash = location.hash.toLowerCase();
+    const hash = decodeURIComponent(location.hash).toLowerCase();
     const category = hash.startsWith("#menu-") ? hash.replace("#menu-", "") : "all";
     setActiveCategory(category);
   }, [location.hash]);
