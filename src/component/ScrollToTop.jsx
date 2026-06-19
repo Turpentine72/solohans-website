@@ -6,18 +6,9 @@ const ScrollToTop = () => {
   const { pathname, hash } = useLocation();
   const [visible, setVisible] = useState(false);
 
-  // Route-change: scroll to hash element or top
+  // Route-change: always scroll to top.
+  // (The hash is still read separately by Menu.jsx to pick the active category.)
   useEffect(() => {
-    if (hash) {
-      setTimeout(() => {
-        const id = hash.replace("#", "");
-        const element = document.getElementById(id);
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }, 100);
-      return;
-    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [pathname, hash]);
 
