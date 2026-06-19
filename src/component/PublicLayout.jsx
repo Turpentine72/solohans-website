@@ -4,7 +4,6 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import FloatingWhatsApp from './FloatingWhatsApp';
 import CartSidebar from './CartSidebar';
-import ScrollToTop from './ScrollToTop';
 import PromoBanner from './PromoBanner';   // ✅ promo banner
 
 export default function PublicLayout({ children }) {
@@ -21,7 +20,6 @@ export default function PublicLayout({ children }) {
 
   return (
     <>
-      <ScrollToTop />
       <PromoBanner />            {/* ✅ displays active promo at the very top */}
       <Navbar />
       {children}

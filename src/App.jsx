@@ -4,6 +4,7 @@ import { CartProvider } from "./context/CartContext";
 import { SettingsProvider } from "./context/SettingsContext";
 import { PromoProvider } from "./context/PromoContext";
 import PublicLayout from "./component/PublicLayout";
+import ScrollToTop from "./component/ScrollToTop";
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Review from "./pages/Review";
@@ -42,6 +43,7 @@ function App() {
   return (
     <HelmetProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <SettingsProvider>
           <CartProvider>
             <AuthProvider>
