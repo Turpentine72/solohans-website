@@ -6,9 +6,28 @@ const ScrollToTop = () => {
   const { pathname, hash } = useLocation();
   const [visible, setVisible] = useState(false);
 
-  // Route-change: always scroll to top.
-  // (The hash is still read separately by Menu.jsx to pick the active category.)
+  // Route-change: scroll smoothly to the matching category section once it
+  // has rendered (categories load asynchronously), or to the top if no
+  // category/hash is present.
   useEffect(() => {
+    if (hash) {
+      const id = hash.replace("#", "");
+      let attempts = 0;
+      const maxAttempts = 30; // retry for up to ~3s while data loads
+
+      const tryScroll = () => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "start" });
+        } else if (attempts < maxAttempts) {
+          attempts += 1;
+          setTimeout(tryScroll, 100);
+        }
+      };
+
+      tryScroll();
+      return;
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [pathname, hash]);
 
