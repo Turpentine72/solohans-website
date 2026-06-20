@@ -48,11 +48,13 @@ export default function Dashboard() {
       const completedOrders = orders.filter(o => o.status === 'Delivered').length;
       const totalRevenue = orders
         .filter(o => o.status === 'Delivered')
-        .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+        .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
       const uniqueCustomers = new Set(
         orders.map(o => o.email || o.phone || o.customer_name).filter(Boolean)
       ).size;
-      const pendingPayments = orders.filter(o => o.payment_status === 'Awaiting Verification').length;
+      // ✅ payment_status is only ever 'unpaid' or 'paid' — 'Awaiting Verification'
+      // was never a real value, so this metric always read 0.
+      const pendingPayments = orders.filter(o => o.payment_status === 'unpaid').length;
 
       setStats([
         { label: 'Total Orders', value: totalOrders, icon: <ShoppingBag size={24} />, bg: 'bg-blue-50 text-blue-600' },

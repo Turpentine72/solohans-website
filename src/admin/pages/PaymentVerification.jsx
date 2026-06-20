@@ -25,7 +25,10 @@ export default function PaymentVerification() {
     setError(null);
     try {
       const allOrders = await ordersApi.getAll({ deleted: 'true' });
-      const verified = allOrders.filter(order => order.status === 'Paid');
+      // ✅ Use payment_status (whether money was received) rather than the
+      // fulfillment "status" field — a paid order must stay listed here
+      // permanently even after it moves to Processing/Out for Delivery/Delivered.
+      const verified = allOrders.filter(order => order.payment_status === 'paid');
       setPayments(verified);
     } catch (err) {
       console.error('Error fetching payments:', err);

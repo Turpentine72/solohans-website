@@ -11,6 +11,7 @@ const defaultForm = {
   image: '',
   status: 'Approved',
   featured: false,
+  reply: '',
 };
 
 export default function Reviews() {
@@ -20,6 +21,7 @@ export default function Reviews() {
   const [editingId, setEditingId] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ ...defaultForm });
+  const [originalReply, setOriginalReply] = useState('');
   const [uploading, setUploading] = useState(false);
 
   const fetchReviews = async () => {
@@ -59,16 +61,24 @@ export default function Reviews() {
     e.preventDefault();
     try {
       if (editingId) {
-        await reviewsApi.updateStatus(editingId, form.status); // partial
-        await reviewsApi.sendReply(editingId, form.text);      // we could use a different approach, but for simplicity we update whole review via a general update
-        // Actually the API has no single update call for all fields; we can use sendReply for text, but we need a general update.
-        // We'll add a generic update function in api.js: update(id, body) -> request(`/reviews/${id}`, { method: 'PATCH', body }).
-        // Since we already have updateStatus etc., we'll just do a custom fetch for full update.
-        await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/reviews/${editingId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('solohans_token')}` },
-          body: JSON.stringify({ customer_name: form.customer_name, email: form.email, rating: form.rating, text: form.text, image: form.image, status: form.status, featured: form.featured }),
+        // ✅ Update the review's own fields (customer-authored content) —
+        // this NEVER touches `reply`, so a customer's review can no longer
+        // be overwritten by or copied into the reply field.
+        await reviewsApi.update(editingId, {
+          customer_name: form.customer_name,
+          email: form.email,
+          rating: form.rating,
+          text: form.text,
+          image: form.image,
+          status: form.status,
+          featured: form.featured,
         });
+
+        // ✅ Only send/update the admin reply if it actually changed —
+        // and only via the dedicated reply field, never from form.text.
+        if (form.reply !== originalReply) {
+          await reviewsApi.sendReply(editingId, form.reply);
+        }
       } else {
         await reviewsApi.create(form);
       }
@@ -79,6 +89,7 @@ export default function Reviews() {
 
   const resetForm = () => {
     setForm({ ...defaultForm });
+    setOriginalReply('');
     setEditingId(null);
     setShowCreate(false);
   };
@@ -93,7 +104,9 @@ export default function Reviews() {
       image: review.image || '',
       status: review.status,
       featured: review.featured,
+      reply: review.reply || '',
     });
+    setOriginalReply(review.reply || '');
     setShowCreate(true);
   };
 
@@ -148,7 +161,15 @@ export default function Reviews() {
                 <div>
                   <label className="block text-sm mb-1">Review Text *</label>
                   <textarea name="text" rows={4} value={form.text} onChange={handleFormChange} required className="w-full px-4 py-2 border rounded-xl" />
+                  <p className="text-xs text-gray-400 mt-1">This is the customer's own words — only edit for moderation (e.g. removing profanity).</p>
                 </div>
+                {editingId && (
+                  <div>
+                    <label className="block text-sm mb-1">Admin/Client Reply (optional)</label>
+                    <textarea name="reply" rows={3} value={form.reply} onChange={handleFormChange} placeholder="Write a public reply to this customer's review..." className="w-full px-4 py-2 border rounded-xl" />
+                    <p className="text-xs text-gray-400 mt-1">Leave empty if you don't want to reply. The customer is emailed only when this changes.</p>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm mb-1">Image (optional)</label>
                   <div className="flex items-center gap-4">
@@ -193,6 +214,7 @@ export default function Reviews() {
                 <th className="py-3 px-4">Customer</th>
                 <th className="py-3 px-4">Rating</th>
                 <th className="py-3 px-4">Text</th>
+                <th className="py-3 px-4">Reply</th>
                 <th className="py-3 px-4">Image</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4">Featured</th>
@@ -201,13 +223,16 @@ export default function Reviews() {
             </thead>
             <tbody>
               {filteredReviews.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-8 text-gray-500">No reviews found.</td></tr>
+                <tr><td colSpan={8} className="text-center py-8 text-gray-500">No reviews found.</td></tr>
               ) : (
                 filteredReviews.map(review => (
                   <tr key={review._id} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4 font-medium">{review.customer_name}</td>
                     <td className="py-3 px-4">{'⭐'.repeat(review.rating)}</td>
                     <td className="py-3 px-4 max-w-xs truncate">{review.text}</td>
+                    <td className="py-3 px-4 max-w-xs truncate text-gray-500">
+                      {review.reply ? review.reply : <span className="italic text-gray-300">No reply</span>}
+                    </td>
                     <td className="py-3 px-4">{review.image ? <img src={review.image} className="h-8 w-8 rounded object-cover" /> : '-'}</td>
                     <td className="py-3 px-4"><span className={`px-2 py-1 rounded-full text-xs font-semibold ${review.status === 'Approved' ? 'bg-green-100 text-green-700' : review.status === 'Hidden' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{review.status}</span></td>
                     <td className="py-3 px-4">
