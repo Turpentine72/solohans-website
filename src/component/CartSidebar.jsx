@@ -30,6 +30,7 @@ export default function CartSidebar() {
   };
 
   const [form, setForm] = useState(() => ({ ...loadSavedInfo(), remember: false }));
+  const [deliveryMethod, setDeliveryMethod] = useState('delivery'); // 'delivery' | 'pickup'
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [formErrors, setFormErrors] = useState('');
   const [orderResult, setOrderResult] = useState(null);
@@ -90,7 +91,7 @@ export default function CartSidebar() {
     if (!form.name.trim()) errors.push('Full name');
     if (!form.phone.trim()) errors.push('Phone number');
     if (!form.email.trim()) errors.push('Email');
-    if (!form.address.trim()) errors.push('Delivery address');
+    if (deliveryMethod === 'delivery' && !form.address.trim()) errors.push('Delivery address');
     if (!agreedToTerms) errors.push('agree to the policies');
     if (errors.length > 0) return `Please fill in: ${errors.join(', ')}.`;
     return null;
@@ -118,7 +119,8 @@ export default function CartSidebar() {
       customerName: form.name,
       customerEmail: form.email,
       phone: form.phone,
-      address: form.address,
+      address: deliveryMethod === 'delivery' ? form.address : '',
+      delivery_method: deliveryMethod,
       order_type: 'online',
       items: orderItems,
       totalAmount: discountedSubtotal,
@@ -128,7 +130,9 @@ export default function CartSidebar() {
     return newOrder;
   };
 
-  // 🟢 Single payment handler – opens Paystack popup for ALL payment methods
+  // 🟢 Pickup: pay the items subtotal immediately, same as before.
+  // 🟢 Delivery: just submit the order — admin must set the delivery fee
+  //    before the customer can pay (handled on the /complete-payment page).
   const handlePaystackPayment = async () => {
     const error = validateForm();
     if (error) { setFormErrors(error); return; }
@@ -144,6 +148,20 @@ export default function CartSidebar() {
     setProcessing(true);
     try {
       const newOrder = await createOrder();
+
+      if (deliveryMethod === 'delivery') {
+        // No payment yet — wait for admin to set the delivery fee.
+        setOrderResult({
+          orderId: newOrder.order_id,
+          email: form.email,
+          deliveryMethod: 'delivery',
+        });
+        clearCart();
+        setStep('submitted');
+        setProcessing(false);
+        return;
+      }
+
       const safeRef = `order_${newOrder._id}_${Date.now()}`;
 
       initializePaystack({
@@ -173,6 +191,7 @@ export default function CartSidebar() {
                 items: cartItems,
                 total: discountedSubtotal,
                 freeItems,
+                deliveryMethod: 'pickup',
               });
               clearCart();
               setStep('receipt');
@@ -198,6 +217,7 @@ export default function CartSidebar() {
     clearCart();
     setStep('cart');
     setOrderResult(null);
+    setDeliveryMethod('delivery');
     setForm(prev => ({ ...loadSavedInfo(), remember: prev.remember }));
     setAgreedToTerms(false);
     setFormErrors('');
@@ -214,6 +234,7 @@ export default function CartSidebar() {
           <h2 className="text-xl font-bold uppercase tracking-wide text-[#222222]">
             {step === 'cart' && 'Your Order'}
             {step === 'checkout' && 'Checkout'}
+            {step === 'submitted' && 'Order Submitted'}
             {step === 'receipt' && 'Order Confirmed'}
           </h2>
           <button onClick={closeCart} className="text-[#222222] hover:text-[#C62828]"><X size={24} /></button>
@@ -281,13 +302,11 @@ export default function CartSidebar() {
                       🚚 Free Delivery Applied!
                     </div>
                   )}
-                  <div className="bg-amber-50 p-3 rounded-lg text-xs text-amber-700">
-                    💡 Delivery fee is paid separately in cash to the rider{freeDelivery ? ' (FREE)' : ''}.
-                  </div>
                   <div className="flex justify-between text-lg font-bold">
-                    <span>Total to pay now</span>
+                    <span>Items Total</span>
                     <span className="text-[#C62828]">₦{discountedSubtotal.toLocaleString()}</span>
                   </div>
+                  <p className="text-xs text-gray-500">Choose Delivery or Pickup at the next step.</p>
                 </div>
               </>
             )
@@ -295,17 +314,46 @@ export default function CartSidebar() {
 
           {step === 'checkout' && (
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#444] mb-2">How would you like to get your order?</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMethod('delivery')}
+                    className={`py-3 rounded-xl border-2 font-semibold text-sm transition ${deliveryMethod === 'delivery' ? 'border-[#C62828] bg-[#FFF8F0] text-[#C62828]' : 'border-gray-200 text-gray-500'}`}
+                  >
+                    🚚 Delivery
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMethod('pickup')}
+                    className={`py-3 rounded-xl border-2 font-semibold text-sm transition ${deliveryMethod === 'pickup' ? 'border-[#C62828] bg-[#FFF8F0] text-[#C62828]' : 'border-gray-200 text-gray-500'}`}
+                  >
+                    🏪 Pickup
+                  </button>
+                </div>
+              </div>
+
               <div><label className="block text-sm font-medium text-[#444] mb-1">Full Name</label><input type="text" name="name" required value={form.name} onChange={handleFormChange} className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:border-[#C62828]" /></div>
               <div><label className="block text-sm font-medium text-[#444] mb-1">Phone Number</label><input type="tel" name="phone" required value={form.phone} onChange={handleFormChange} className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:border-[#C62828]" /></div>
               <div><label className="block text-sm font-medium text-[#444] mb-1">Email</label><input type="email" name="email" required value={form.email} onChange={handleFormChange} className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:border-[#C62828]" /></div>
-              <div><label className="block text-sm font-medium text-[#444] mb-1">Delivery Address</label><textarea name="address" rows="2" required value={form.address} onChange={handleFormChange} className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:border-[#C62828] resize-none" /></div>
 
-              <div className="bg-gray-50 p-4 rounded-xl">
-                <p className="text-sm font-medium mb-3 flex items-center gap-2"><CreditCard size={18} /> Pay securely with Paystack</p>
-                <div className="mb-2"><img src={cardimg} alt="Accepted Cards" className="h-8 object-contain" /></div>
-                <p className="text-xs text-gray-600">You can pay with Card, Bank Transfer, or USSD.</p>
-                <div className="flex items-center gap-2 text-xs text-green-700 mt-2"><ShieldCheck size={16} className="text-green-600" /> All payments are secured with SSL encryption.</div>
-              </div>
+              {deliveryMethod === 'delivery' && (
+                <div><label className="block text-sm font-medium text-[#444] mb-1">Delivery Address</label><textarea name="address" rows="2" required value={form.address} onChange={handleFormChange} className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:border-[#C62828] resize-none" /></div>
+              )}
+
+              {deliveryMethod === 'delivery' ? (
+                <div className="bg-blue-50 text-blue-700 p-3 rounded-lg text-xs">
+                  📍 After you submit, our team will review your location and set a delivery fee. You'll get an email with a secure payment link to pay the final amount (items + delivery fee) online.
+                </div>
+              ) : (
+                <div className="bg-gray-50 p-4 rounded-xl">
+                  <p className="text-sm font-medium mb-3 flex items-center gap-2"><CreditCard size={18} /> Pay securely with Paystack</p>
+                  <div className="mb-2"><img src={cardimg} alt="Accepted Cards" className="h-8 object-contain" /></div>
+                  <p className="text-xs text-gray-600">You can pay with Card, Bank Transfer, or USSD.</p>
+                  <div className="flex items-center gap-2 text-xs text-green-700 mt-2"><ShieldCheck size={16} className="text-green-600" /> All payments are secured with SSL encryption.</div>
+                </div>
+              )}
 
               <label className="flex items-start gap-3 text-sm cursor-pointer">
                 <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="w-4 h-4 mt-0.5 rounded border-gray-300 text-[#C62828] focus:ring-[#C62828]" />
@@ -317,8 +365,6 @@ export default function CartSidebar() {
                 Remember my details for future orders
               </label>
 
-              <div className="bg-amber-50 p-3 rounded-lg text-xs text-amber-700">🚚 Delivery fee is paid separately in cash when your order arrives{freeDelivery ? ' (FREE today!)' : ''}.</div>
-
               {formErrors && <div className="bg-red-50 text-red-700 p-3 rounded-xl text-sm">{formErrors}</div>}
 
               <button
@@ -326,8 +372,31 @@ export default function CartSidebar() {
                 disabled={processing}
                 className="w-full py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C] disabled:opacity-70"
               >
-                {processing ? 'Processing...' : `Pay ₦${discountedSubtotal.toLocaleString()} with Paystack`}
+                {processing
+                  ? 'Processing...'
+                  : deliveryMethod === 'delivery'
+                    ? 'Submit Order'
+                    : `Pay ₦${discountedSubtotal.toLocaleString()} with Paystack`}
               </button>
+            </div>
+          )}
+
+          {step === 'submitted' && orderResult && (
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShoppingCart size={32} className="text-blue-600" />
+              </div>
+              <h3 className="text-xl font-bold text-[#222222]">Order #{orderResult.orderId} Submitted</h3>
+              <p className="text-gray-500 mt-2 mb-6">
+                Thank you! Our team is reviewing your delivery location and will set your delivery fee shortly.
+                You'll receive an email at <strong>{orderResult.email}</strong> with a secure link to pay the
+                final amount (items + delivery fee) online.
+              </p>
+              <div className="bg-blue-50 text-blue-700 p-4 rounded-xl text-sm text-left mb-6">
+                💡 No payment has been taken yet. Your order will only be confirmed once you complete payment
+                through the link in that email.
+              </div>
+              <button onClick={handlePlaceOrder} className="w-full py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C]">Close & Continue Shopping</button>
             </div>
           )}
 
@@ -338,7 +407,6 @@ export default function CartSidebar() {
                 <h3 className="text-xl font-bold text-[#222222]">Order #{orderResult.orderId}</h3>
                 <p className="text-gray-500">Thank you, {form.name}!</p>
                 <p className="text-sm mt-2">Payment: Online</p>
-                {freeDelivery && <p className="text-green-600 text-sm mt-1">🚚 Free delivery applied</p>}
               </div>
 
               <div className="bg-[#FFF8F0] rounded-xl p-4 mb-6 text-left space-y-2">
@@ -358,8 +426,8 @@ export default function CartSidebar() {
                   </div>
                 )}
                 <hr />
-                <div className="flex justify-between font-medium"><span>Delivery</span><span className="text-amber-600">{freeDelivery ? 'FREE' : 'Paid on delivery'}</span></div>
-                <div className="flex justify-between font-bold"><span>Total</span><span className="text-[#C62828]">₦{orderResult.total.toLocaleString()}</span></div>
+                <div className="flex justify-between font-medium"><span>Pickup</span><span className="text-green-600">No delivery fee</span></div>
+                <div className="flex justify-between font-bold"><span>Total Paid</span><span className="text-[#C62828]">₦{orderResult.total.toLocaleString()}</span></div>
               </div>
 
               <button onClick={handlePlaceOrder} className="w-full py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C]">Close & Continue Shopping</button>

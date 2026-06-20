@@ -67,6 +67,8 @@ export const categories = {
 // ─── ORDERS ───────────────────────────────────────────────────────────────────
 export const orders = {
   create: (body) => request('/orders', { method: 'POST', body: JSON.stringify(body) }),
+  getPaymentInfo: ({ order_id, email }) =>
+    request(`/orders/payment-info?order_id=${encodeURIComponent(order_id)}&email=${encodeURIComponent(email)}`),
   getAll: (params = {}) => {
     const q = new URLSearchParams(params).toString();
     return request(`/orders${q ? '?' + q : ''}`);
@@ -144,6 +146,11 @@ export const promos = {
 };
 
 // ─── GALLERY ──────────────────────────────────────────────────────────────────
+export const payments = {
+  verify: (reference, orderId) =>
+    request('/payments/verify', { method: 'POST', body: JSON.stringify({ reference, orderId }) }),
+};
+
 export const gallery = {
   getPublic: () => request('/gallery'),
   getAdmin: () => request('/gallery/admin'),
