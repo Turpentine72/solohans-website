@@ -33,6 +33,7 @@ const navItems = [
   { label: 'Notifications', icon: <Bell size={20} />, path: '/admin/notifications' },
   { label: 'Promotions', icon: <Gift size={20} />, path: '/admin/promotions' },
   { label: 'Gallery', icon: <Image size={20} />, path: '/admin/gallery' },
+  { label: 'Delivery Zones', icon: <Truck size={20} />, path: '/admin/delivery-zones' },
   { label: 'Legal Pages', path: '/admin/legal', icon: <FileText size={18} /> },
   { label: 'Reports & Analytics', icon: <BarChart3 size={20} />, path: '/admin/reports' },
   { label: 'Settings', icon: <Settings size={20} />, path: '/admin/settings' },

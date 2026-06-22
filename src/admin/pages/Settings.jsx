@@ -25,6 +25,7 @@ export default function Settings() {
     address: '',
     mapUrl: '',
     workingHours: '',
+    businessHours: { enabled: false, openTime: '08:00', closeTime: '22:00' },
     social: {
       facebook: '',
       instagram: '',
@@ -87,6 +88,11 @@ export default function Settings() {
         address: data.address || '',
         mapUrl: data.mapUrl || '',
         workingHours: data.workingHours || '',
+        businessHours: {
+          enabled: data.businessHours?.enabled || false,
+          openTime: data.businessHours?.openTime || '08:00',
+          closeTime: data.businessHours?.closeTime || '22:00',
+        },
         social: data.social || { facebook: '', instagram: '', tiktok: '', snapchat: '' },
       });
       setPayment({
@@ -380,6 +386,40 @@ export default function Settings() {
               <div><label>Address</label><textarea name="address" rows={2} value={general.address} onChange={handleGeneralChange} className="w-full px-4 py-3 border rounded-xl" /></div>
               <div><label>Google Maps Embed URL</label><input type="url" name="mapUrl" value={general.mapUrl} onChange={handleGeneralChange} className="w-full px-4 py-3 border rounded-xl" /></div>
               <div><label>Working Hours (HTML allowed)</label><textarea name="workingHours" rows={2} value={general.workingHours} onChange={handleGeneralChange} className="w-full px-4 py-3 border rounded-xl" /></div>
+
+              <div className="border rounded-xl p-4 bg-gray-50">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={general.businessHours.enabled}
+                    onChange={(e) => setGeneral(prev => ({ ...prev, businessHours: { ...prev.businessHours, enabled: e.target.checked } }))}
+                    className="w-5 h-5"
+                  />
+                  <span className="font-medium">Enforce business hours (auto-decline orders outside these hours)</span>
+                </label>
+                {general.businessHours.enabled && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm mb-1">Opening Time (Lagos time)</label>
+                      <input
+                        type="time"
+                        value={general.businessHours.openTime}
+                        onChange={(e) => setGeneral(prev => ({ ...prev, businessHours: { ...prev.businessHours, openTime: e.target.value } }))}
+                        className="w-full px-3 py-2 border rounded-xl"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1">Closing Time (Lagos time)</label>
+                      <input
+                        type="time"
+                        value={general.businessHours.closeTime}
+                        onChange={(e) => setGeneral(prev => ({ ...prev, businessHours: { ...prev.businessHours, closeTime: e.target.value } }))}
+                        className="w-full px-3 py-2 border rounded-xl"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border p-6 space-y-5">

@@ -151,6 +151,15 @@ export const payments = {
     request('/payments/verify', { method: 'POST', body: JSON.stringify({ reference, orderId }) }),
 };
 
+export const deliveryZones = {
+  getActive: () => request('/delivery-zones/active'),
+  getAll: () => request('/delivery-zones'),
+  create: (body) => request('/delivery-zones', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id, body) => request(`/delivery-zones/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  toggle: (id) => request(`/delivery-zones/${id}/toggle`, { method: 'PATCH' }),
+  delete: (id) => request(`/delivery-zones/${id}`, { method: 'DELETE' }),
+};
+
 export const gallery = {
   getPublic: () => request('/gallery'),
   getAdmin: () => request('/gallery/admin'),

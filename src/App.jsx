@@ -33,6 +33,7 @@ import Settings from "./admin/pages/Settings";
 import Legal from "./admin/pages/Legal";
 import Promotions from "./admin/pages/Promotions";
 import GalleryManagement from "./admin/pages/GalleryManagement";
+import DeliveryZones from "./admin/pages/DeliveryZones";
 import AdminPayout from "./admin/pages/AdminPayout"; // 🆕 Payout page
 import Login from "./admin/pages/Login";
 import ForgotPassword from "./admin/pages/ForgotPassword";
@@ -97,6 +98,7 @@ function App() {
                             <Route path="notifications" element={<Notifications />} />
                             <Route path="promotions" element={<Promotions />} />
                             <Route path="gallery" element={<GalleryManagement />} />
+                            <Route path="delivery-zones" element={<DeliveryZones />} />
                             <Route path="reports" element={<Reports />} />
                             <Route path="settings" element={<Settings />} />
                             <Route path="legal" element={<Legal />} />

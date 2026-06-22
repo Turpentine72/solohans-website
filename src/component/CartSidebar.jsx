@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   X, Minus, Plus, Trash2, ShoppingCart, CreditCard, ShieldCheck,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { usePromos } from '../context/PromoContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { orders as ordersApi } from '../lib/api';
+import { orders as ordersApi, deliveryZones as deliveryZonesApi } from '../lib/api';
 import { initializePaystack } from '../lib/paystack';
 import cardimg from '../assets/images.png';
 
@@ -31,6 +31,8 @@ export default function CartSidebar() {
 
   const [form, setForm] = useState(() => ({ ...loadSavedInfo(), remember: false }));
   const [deliveryMethod, setDeliveryMethod] = useState('delivery'); // 'delivery' | 'pickup'
+  const [zones, setZones] = useState([]);
+  const [selectedZoneId, setSelectedZoneId] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [formErrors, setFormErrors] = useState('');
   const [orderResult, setOrderResult] = useState(null);
@@ -86,6 +88,13 @@ export default function CartSidebar() {
     setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
+  useEffect(() => {
+    deliveryZonesApi.getActive().then(setZones).catch(() => setZones([]));
+  }, []);
+
+  const selectedZone = zones.find(z => z._id === selectedZoneId) || null;
+  const payNowAmount = discountedSubtotal + (deliveryMethod === 'delivery' && selectedZone ? selectedZone.fee : 0);
+
   const validateForm = () => {
     const errors = [];
     if (!form.name.trim()) errors.push('Full name');
@@ -121,6 +130,7 @@ export default function CartSidebar() {
       phone: form.phone,
       address: deliveryMethod === 'delivery' ? form.address : '',
       delivery_method: deliveryMethod,
+      delivery_zone_id: deliveryMethod === 'delivery' ? (selectedZoneId || undefined) : undefined,
       order_type: 'online',
       items: orderItems,
       totalAmount: discountedSubtotal,
@@ -149,7 +159,9 @@ export default function CartSidebar() {
     try {
       const newOrder = await createOrder();
 
-      if (deliveryMethod === 'delivery') {
+      // ✅ Trust the backend's determination of whether a fee is known yet —
+      // true for pickup, true for a matched delivery zone, false otherwise.
+      if (!newOrder.delivery_fee_set) {
         // No payment yet — wait for admin to set the delivery fee.
         setOrderResult({
           orderId: newOrder.order_id,
@@ -162,11 +174,12 @@ export default function CartSidebar() {
         return;
       }
 
+      const amountToPay = newOrder.totalAmount; // includes zone delivery fee, if any
       const safeRef = `order_${newOrder._id}_${Date.now()}`;
 
       initializePaystack({
         email: form.email || 'customer@solohans.com',
-        amount: discountedSubtotal,
+        amount: amountToPay,
         orderId: safeRef,
         metadata: { orderId: newOrder._id },
         onSuccess: async (transaction) => {
@@ -189,9 +202,10 @@ export default function CartSidebar() {
               setOrderResult({
                 orderId: data.order_id ?? newOrder.order_id,
                 items: cartItems,
-                total: discountedSubtotal,
+                total: amountToPay,
+                deliveryFee: newOrder.delivery_fee || 0,
                 freeItems,
-                deliveryMethod: 'pickup',
+                deliveryMethod: newOrder.delivery_method,
               });
               clearCart();
               setStep('receipt');
@@ -207,7 +221,7 @@ export default function CartSidebar() {
       });
     } catch (err) {
       console.error('Order creation error:', err);
-      alert('Could not create order. Please try again.');
+      alert(err.message || 'Could not create order. Please try again.');
     } finally {
       setProcessing(false);
     }
@@ -218,6 +232,7 @@ export default function CartSidebar() {
     setStep('cart');
     setOrderResult(null);
     setDeliveryMethod('delivery');
+    setSelectedZoneId('');
     setForm(prev => ({ ...loadSavedInfo(), remember: prev.remember }));
     setAgreedToTerms(false);
     setFormErrors('');
@@ -339,12 +354,30 @@ export default function CartSidebar() {
               <div><label className="block text-sm font-medium text-[#444] mb-1">Email</label><input type="email" name="email" required value={form.email} onChange={handleFormChange} className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:border-[#C62828]" /></div>
 
               {deliveryMethod === 'delivery' && (
-                <div><label className="block text-sm font-medium text-[#444] mb-1">Delivery Address</label><textarea name="address" rows="2" required value={form.address} onChange={handleFormChange} className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:border-[#C62828] resize-none" /></div>
+                <>
+                  <div><label className="block text-sm font-medium text-[#444] mb-1">Delivery Address</label><textarea name="address" rows="2" required value={form.address} onChange={handleFormChange} className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:border-[#C62828] resize-none" /></div>
+
+                  {zones.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-[#444] mb-1">Delivery Area</label>
+                      <select
+                        value={selectedZoneId}
+                        onChange={(e) => setSelectedZoneId(e.target.value)}
+                        className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:border-[#C62828]"
+                      >
+                        <option value="">My area isn't listed</option>
+                        {zones.map(z => (
+                          <option key={z._id} value={z._id}>{z.name} — ₦{z.fee.toLocaleString()}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </>
               )}
 
-              {deliveryMethod === 'delivery' ? (
+              {deliveryMethod === 'delivery' && !selectedZone ? (
                 <div className="bg-blue-50 text-blue-700 p-3 rounded-lg text-xs">
-                  📍 After you submit, our team will review your location and set a delivery fee. You'll get an email with a secure payment link to pay the final amount (items + delivery fee) online.
+                  📍 {zones.length > 0 ? "Don't see your area above? " : ''}After you submit, our team will review your location and set a delivery fee. You'll get an email with a secure payment link to pay the final amount (items + delivery fee) online.
                 </div>
               ) : (
                 <div className="bg-gray-50 p-4 rounded-xl">
@@ -374,9 +407,9 @@ export default function CartSidebar() {
               >
                 {processing
                   ? 'Processing...'
-                  : deliveryMethod === 'delivery'
+                  : deliveryMethod === 'delivery' && !selectedZone
                     ? 'Submit Order'
-                    : `Pay ₦${discountedSubtotal.toLocaleString()} with Paystack`}
+                    : `Pay ₦${payNowAmount.toLocaleString()} with Paystack`}
               </button>
             </div>
           )}
@@ -426,9 +459,17 @@ export default function CartSidebar() {
                   </div>
                 )}
                 <hr />
-                <div className="flex justify-between font-medium"><span>Pickup</span><span className="text-green-600">No delivery fee</span></div>
+                {orderResult.deliveryMethod === 'pickup' ? (
+                  <div className="flex justify-between font-medium"><span>Pickup</span><span className="text-green-600">No delivery fee</span></div>
+                ) : (
+                  <div className="flex justify-between font-medium"><span>Delivery Fee</span><span>₦{(orderResult.deliveryFee || 0).toLocaleString()}</span></div>
+                )}
                 <div className="flex justify-between font-bold"><span>Total Paid</span><span className="text-[#C62828]">₦{orderResult.total.toLocaleString()}</span></div>
               </div>
+
+              {orderResult.deliveryMethod === 'delivery' && (
+                <p className="text-xs text-gray-500 mb-4">🚚 Delivering to: {form.address}</p>
+              )}
 
               <button onClick={handlePlaceOrder} className="w-full py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C]">Close & Continue Shopping</button>
             </div>
