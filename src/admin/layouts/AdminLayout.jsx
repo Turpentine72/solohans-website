@@ -1,9 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { Menu } from 'lucide-react';
+import { setupAdminPushNotifications } from '../../lib/firebase';
 
 export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    // Ask once per admin session. If permission is already granted from a
+    // previous visit, the browser won't prompt again.
+    setupAdminPushNotifications((payload) => {
+      // Foreground message (admin tab is open) — Firebase doesn't auto-show
+      // a system notification in this case, so show one manually for a
+      // consistent experience whether the tab is open or not.
+      const title = payload.notification?.title || 'New notification';
+      const body = payload.notification?.body || '';
+      if (Notification.permission === 'granted') {
+        new Notification(title, { body, icon: '/favicon.png' });
+      }
+    });
+  }, []);
 
   return (
     <div className="flex h-screen bg-gray-100">
