@@ -334,6 +334,7 @@ export default function Orders() {
                   <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium">{selectedOrder.phone || 'N/A'}</p></div>
                   <div><p className="text-xs text-gray-500">Email</p><p className="font-medium">{selectedOrder.customerEmail || 'N/A'}</p></div>
                   <div><p className="text-xs text-gray-500">Address</p><p className="font-medium">{selectedOrder.address || 'N/A'}</p></div>
+                  <div><p className="text-xs text-gray-500">Order Channel</p><p className="font-medium">{selectedOrder.order_channel === 'whatsapp' ? '💬 WhatsApp' : '💳 Online'}</p></div>
                   <div><p className="text-xs text-gray-500">Order Type</p><p className="font-medium">Card</p></div>
                   <div><p className="text-xs text-gray-500">Food Total</p><p className="font-medium">₦{selectedOrder.totalAmount?.toLocaleString()}</p></div>
                 </div>
@@ -349,6 +350,13 @@ export default function Orders() {
                       <input type="number" value={deliveryFee} onChange={e => setDeliveryFee(Number(e.target.value))} className="flex-1 px-4 py-2 border rounded-xl" />
                       <button onClick={() => updateDeliveryFee(selectedOrder._id, deliveryFee)} disabled={updatingFee} className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50">Save</button>
                     </div>
+                  </div>
+                )}
+
+                {selectedOrder.notes && (
+                  <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl text-sm">
+                    <p className="text-xs text-amber-700 font-semibold mb-1">📝 Customer Note</p>
+                    <p className="text-amber-900">{selectedOrder.notes}</p>
                   </div>
                 )}
 

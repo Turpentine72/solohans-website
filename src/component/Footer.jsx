@@ -6,7 +6,8 @@ import cardimg from '../assets/images.png';
 export default function Footer() {
   const { settings } = useSettings();
 
-  const name = settings?.name || 'Solohans';
+  const name = settings?.name || 'SOLOHANS DELICIOUS MEAL';
+  const logo = settings?.logo || '';
   const phone = settings?.phone || '+234 903 341 9872';
   const email = settings?.email || 'info@solohans.com';
   const address = settings?.address || 'Adeniran Ogunsanya Street, Surulere, Lagos, Nigeria';
@@ -18,6 +19,9 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           {/* Brand */}
           <div>
+            {logo && (
+              <img src={logo} alt={name} className="h-12 w-auto object-contain mb-3" />
+            )}
             <h3 className="text-xl font-bold uppercase tracking-wide mb-4">{name}</h3>
             <p className="text-gray-400 text-sm leading-7">
               Fresh, delicious meals delivered to your doorstep in Surulere, Lagos.

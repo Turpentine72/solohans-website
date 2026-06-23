@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import {
-  X, Minus, Plus, Trash2, ShoppingCart, CreditCard, ShieldCheck,
+  X, Minus, Plus, Trash2, ShoppingCart, CreditCard, ShieldCheck, MessageCircle,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { usePromos } from '../context/PromoContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { orders as ordersApi, deliveryZones as deliveryZonesApi } from '../lib/api';
 import { initializePaystack } from '../lib/paystack';
+import { useSettings } from '../context/SettingsContext';
 import cardimg from '../assets/images.png';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -18,6 +19,7 @@ export default function CartSidebar() {
   } = useCart();
 
   const { activePromos } = usePromos();
+  const { settings } = useSettings();
   const navigate = useNavigate();
   const [step, setStep] = useState('cart');
 
@@ -30,6 +32,7 @@ export default function CartSidebar() {
   };
 
   const [form, setForm] = useState(() => ({ ...loadSavedInfo(), remember: false }));
+  const [notes, setNotes] = useState(''); // per-order, never saved/remembered
   const [deliveryMethod, setDeliveryMethod] = useState('delivery'); // 'delivery' | 'pickup'
   const [zones, setZones] = useState([]);
   const [selectedZoneId, setSelectedZoneId] = useState('');
@@ -107,7 +110,7 @@ export default function CartSidebar() {
   };
 
   // Helper: create order (with paymentStatus: 'pending')
-  const createOrder = async () => {
+  const createOrder = async (channel = 'online') => {
     const orderItems = cartItems.map(item => ({
       menu_item_id: item.id,
       name: item.name,
@@ -132,6 +135,8 @@ export default function CartSidebar() {
       delivery_method: deliveryMethod,
       delivery_zone_id: deliveryMethod === 'delivery' ? (selectedZoneId || undefined) : undefined,
       order_type: 'online',
+      order_channel: channel,
+      notes: notes.trim(),
       items: orderItems,
       totalAmount: discountedSubtotal,
       paymentStatus: 'pending',
@@ -227,12 +232,57 @@ export default function CartSidebar() {
     }
   };
 
+  // 🟢 WhatsApp ordering: cart is still the mandatory checkpoint — the order
+  // is created in the database FIRST (so admin sees it, it has a real
+  // Order ID, and it's trackable), THEN WhatsApp opens with that order's
+  // details pre-filled. Payment is handled manually by admin afterward.
+  const handleWhatsAppOrder = async () => {
+    const error = validateForm();
+    if (error) { setFormErrors(error); return; }
+    setFormErrors('');
+
+    setProcessing(true);
+    try {
+      const newOrder = await createOrder('whatsapp');
+
+      const lines = [
+        `Hi Solohans! I'd like to place an order 🍽️`,
+        ``,
+        `*Order ID:* ${newOrder.order_id}`,
+        ...cartItems.map(item => `• ${item.name} × ${item.quantity}`),
+        ...freeItems.map(free => `• ${free.name} (FREE)`),
+        ``,
+        `*Items Total:* ₦${discountedSubtotal.toLocaleString()}`,
+        deliveryMethod === 'pickup'
+          ? `*Pickup at restaurant*`
+          : `*Delivery to:* ${form.address}${selectedZone ? ` (${selectedZone.name})` : ''}`,
+      ];
+      if (notes.trim()) lines.push(``, `*Note:* ${notes.trim()}`);
+      lines.push(``, `Name: ${form.name}`, `Phone: ${form.phone}`);
+
+      const message = encodeURIComponent(lines.join('\n'));
+      const whatsappNumber = (settings?.whatsapp || '+234 808 194 1298').replace(/[^\d]/g, '');
+
+      window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
+
+      setOrderResult({ orderId: newOrder.order_id, email: form.email, deliveryMethod: newOrder.delivery_method, channel: 'whatsapp' });
+      clearCart();
+      setStep('submitted');
+    } catch (err) {
+      console.error('WhatsApp order creation error:', err);
+      alert(err.message || 'Could not create order. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handlePlaceOrder = () => {
     clearCart();
     setStep('cart');
     setOrderResult(null);
     setDeliveryMethod('delivery');
     setSelectedZoneId('');
+    setNotes('');
     setForm(prev => ({ ...loadSavedInfo(), remember: prev.remember }));
     setAgreedToTerms(false);
     setFormErrors('');
@@ -388,6 +438,18 @@ export default function CartSidebar() {
                 </div>
               )}
 
+              <div>
+                <label className="block text-sm font-medium text-[#444] mb-1">Additional Notes (optional)</label>
+                <textarea
+                  rows="2"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="e.g. no onions, ring the bell twice, leave at gate..."
+                  className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:border-[#C62828] resize-none"
+                />
+                <p className="text-xs text-gray-400 mt-1">We'll pass this along to our team with your order.</p>
+              </div>
+
               <label className="flex items-start gap-3 text-sm cursor-pointer">
                 <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="w-4 h-4 mt-0.5 rounded border-gray-300 text-[#C62828] focus:ring-[#C62828]" />
                 <span className="text-gray-700">I have read and agree to the <Link to="/privacy" className="text-[#C62828] underline">Privacy Policy</Link>, <Link to="/terms" className="text-[#C62828] underline">Terms of Service</Link>, and <Link to="/payment-policy" className="text-[#C62828] underline">Payment Policy</Link>.</span>
@@ -411,7 +473,16 @@ export default function CartSidebar() {
                     ? 'Submit Order'
                     : `Pay ₦${payNowAmount.toLocaleString()} with Paystack`}
               </button>
+
+              <button
+                onClick={handleWhatsAppOrder}
+                disabled={processing}
+                className="w-full py-3 bg-[#25D366] text-white rounded-full font-semibold hover:bg-[#1ebe57] disabled:opacity-70 flex items-center justify-center gap-2"
+              >
+                <MessageCircle size={18} /> Order via WhatsApp
+              </button>
             </div>
+
           )}
 
           {step === 'submitted' && orderResult && (
@@ -420,15 +491,32 @@ export default function CartSidebar() {
                 <ShoppingCart size={32} className="text-blue-600" />
               </div>
               <h3 className="text-xl font-bold text-[#222222]">Order #{orderResult.orderId} Submitted</h3>
-              <p className="text-gray-500 mt-2 mb-6">
-                Thank you! Our team is reviewing your delivery location and will set your delivery fee shortly.
-                You'll receive an email at <strong>{orderResult.email}</strong> with a secure link to pay the
-                final amount (items + delivery fee) online.
-              </p>
-              <div className="bg-blue-50 text-blue-700 p-4 rounded-xl text-sm text-left mb-6">
-                💡 No payment has been taken yet. Your order will only be confirmed once you complete payment
-                through the link in that email.
-              </div>
+
+              {orderResult.channel === 'whatsapp' ? (
+                <>
+                  <p className="text-gray-500 mt-2 mb-6">
+                    Your order has been saved and WhatsApp should have opened in a new tab with your order
+                    details ready to send. If it didn't open, just message us your Order ID directly.
+                  </p>
+                  <div className="bg-green-50 text-green-700 p-4 rounded-xl text-sm text-left mb-6">
+                    💬 Our team will confirm your order and payment details with you directly on WhatsApp.
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-500 mt-2 mb-6">
+                    Thank you! Our team is reviewing your delivery location and will set your delivery fee shortly.
+                    You'll receive an email at <strong>{orderResult.email}</strong> with a secure link to pay the
+                    final amount (items + delivery fee) online.
+                  </p>
+                  <div className="bg-blue-50 text-blue-700 p-4 rounded-xl text-sm text-left mb-6">
+                    💡 No payment has been taken yet. Your order will only be confirmed once you complete payment
+                    through the link in that email.
+                  </div>
+                </>
+              )}
+
+              <Link to="/track-order" onClick={handlePlaceOrder} className="w-full inline-block py-3 mb-3 border-2 border-[#C62828] text-[#C62828] rounded-full font-semibold hover:bg-[#FFF8F0]">Track This Order</Link>
               <button onClick={handlePlaceOrder} className="w-full py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C]">Close & Continue Shopping</button>
             </div>
           )}
@@ -470,6 +558,8 @@ export default function CartSidebar() {
               {orderResult.deliveryMethod === 'delivery' && (
                 <p className="text-xs text-gray-500 mb-4">🚚 Delivering to: {form.address}</p>
               )}
+
+              <Link to="/track-order" onClick={handlePlaceOrder} className="w-full inline-block py-3 mb-3 border-2 border-[#C62828] text-[#C62828] rounded-full font-semibold hover:bg-[#FFF8F0]">Track This Order</Link>
 
               <button onClick={handlePlaceOrder} className="w-full py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C]">Close & Continue Shopping</button>
             </div>
