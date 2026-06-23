@@ -10,10 +10,7 @@ const firebaseConfig = {
   apiKey: 'AIzaSyBd0sFGgIjriA1qVxqqtoAXvYjxGpivuYQ',
   authDomain: 'solohans-delicious-meal.firebaseapp.com',
   projectId: 'solohans-delicious-meal',
-
-  // FIXED
   storageBucket: 'solohans-delicious-meal.appspot.com',
-
   messagingSenderId: '834789939905',
   appId: '1:834789939905:web:dc85978672fd23f29c9240',
 };
@@ -27,27 +24,55 @@ export async function setupAdminPushNotifications(
   onReceiveForeground
 ) {
   try {
-    const supported = await isSupported();
+    const supported =
+      await isSupported();
 
     if (!supported) {
-      console.warn('Push unsupported');
+      console.warn(
+        'Push unsupported'
+      );
       return;
     }
 
-    // REGISTER FIRST
+    if (
+      !('serviceWorker' in navigator)
+    ) {
+      return;
+    }
+
     const registration =
       await navigator.serviceWorker.register(
-        '/firebase-messaging-sw.js'
+        '/firebase-messaging-sw.js',
+        {
+          scope: '/',
+        }
       );
 
-    await navigator.serviceWorker.ready;
+    await registration.update();
 
-    // THEN ASK
+    console.log(
+      'Standalone:',
+      window.matchMedia(
+        '(display-mode: standalone)'
+      ).matches
+    );
+
+    console.log(
+      'Permission before:',
+      Notification.permission
+    );
+
     const permission =
       await Notification.requestPermission();
 
-    if (permission !== 'granted') {
-      console.warn('Permission denied');
+    console.log(
+      'Permission after:',
+      permission
+    );
+
+    if (
+      permission !== 'granted'
+    ) {
       return;
     }
 
@@ -55,17 +80,25 @@ export async function setupAdminPushNotifications(
       getMessaging(app);
 
     const token =
-      await getToken(messaging, {
-        vapidKey: VAPID_KEY,
-        serviceWorkerRegistration:
-          registration,
-      });
+      await getToken(
+        messaging,
+        {
+          vapidKey:
+            VAPID_KEY,
+          serviceWorkerRegistration:
+            registration,
+        }
+      );
 
-    console.log('FCM token:', token);
+    console.log(
+      'FCM token:',
+      token
+    );
 
     if (token) {
       const API_BASE =
-        import.meta.env.VITE_API_BASE_URL ||
+        import.meta.env
+          .VITE_API_BASE_URL ||
         'http://localhost:5000/api';
 
       const authToken =
@@ -83,9 +116,10 @@ export async function setupAdminPushNotifications(
             Authorization:
               `Bearer ${authToken}`,
           },
-          body: JSON.stringify({
-            token,
-          }),
+          body:
+            JSON.stringify({
+              token,
+            }),
         }
       );
     }
