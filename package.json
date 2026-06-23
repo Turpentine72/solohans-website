@@ -1,12 +1,13 @@
 {
-  "name": "solohans-backend",
-  "version": "1.0.0",
+  "name": "solohans",
+  "private": true,
+  "version": "0.0.0",
   "type": "module",
-  "description": "Express + MongoDB backend for Solohans Delicious Meals",
-  "main": "server.js",
   "scripts": {
-    "dev": "nodemon server.js",
-    "start": "node server.js"
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
   "dependencies": {
     "axios": "^1.18.0",
@@ -15,6 +16,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "firebase": "^12.15.0",
     "firebase-admin": "^14.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.4.1",
