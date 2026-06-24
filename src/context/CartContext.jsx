@@ -15,8 +15,12 @@ const parsePrice = (val) => {
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [checkoutMode, setCheckoutMode] = useState('online'); // 'online' | 'whatsapp'
 
-  const openCart = () => setIsOpen(true);
+  const openCart = (mode = 'online') => {
+    setCheckoutMode(mode);
+    setIsOpen(true);
+  };
   const closeCart = () => setIsOpen(false);
 
   const addToCart = (item) => {
@@ -31,7 +35,7 @@ export function CartProvider({ children }) {
       const price = parsePrice(item.price);
       return [...prev, { ...item, price, quantity: 1 }];
     });
-    openCart();
+    setIsOpen(true); // open the cart without resetting whatever checkoutMode is already set
   };
 
   const removeFromCart = (id) => {
@@ -67,6 +71,7 @@ export function CartProvider({ children }) {
       value={{
         cartItems,
         isOpen,
+        checkoutMode,
         openCart,
         closeCart,
         addToCart,

@@ -14,7 +14,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api
 
 export default function CartSidebar() {
   const {
-    cartItems, isOpen, closeCart, removeFromCart,
+    cartItems, isOpen, checkoutMode, closeCart, removeFromCart,
     increaseQuantity, decreaseQuantity, subtotal, itemCount, clearCart,
   } = useCart();
 
@@ -479,7 +479,12 @@ export default function CartSidebar() {
                 </>
               )}
 
-              {deliveryMethod === 'delivery' && !selectedZone ? (
+              {checkoutMode === 'whatsapp' ? (
+                <div className="bg-green-50 text-green-700 p-4 rounded-xl text-sm flex items-start gap-2">
+                  <MessageCircle size={18} className="mt-0.5 flex-shrink-0" />
+                  <span>We'll send your order details straight to WhatsApp so our team can confirm everything with you directly, including your final delivery fee if it's not already set above.</span>
+                </div>
+              ) : deliveryMethod === 'delivery' && !selectedZone ? (
                 <div className="bg-blue-50 text-blue-700 p-3 rounded-lg text-xs">
                   📍 {zones.length > 0 ? "Don't see your area above? " : ''}After you submit, our team will review your location and set a delivery fee. You'll get an email with a secure payment link to pay the final amount (items + delivery fee) online.
                 </div>
@@ -517,23 +522,23 @@ export default function CartSidebar() {
               {formErrors && <div className="bg-red-50 text-red-700 p-3 rounded-xl text-sm">{formErrors}</div>}
 
               <button
-                onClick={handlePaystackPayment}
+                onClick={checkoutMode === 'whatsapp' ? handleWhatsAppOrder : handlePaystackPayment}
                 disabled={processing}
-                className="w-full py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C] disabled:opacity-70"
+                className={`w-full py-3 rounded-full font-semibold disabled:opacity-70 flex items-center justify-center gap-2 ${
+                  checkoutMode === 'whatsapp'
+                    ? 'bg-[#25D366] text-white hover:bg-[#1ebe57]'
+                    : 'bg-[#C62828] text-white hover:bg-[#B71C1C]'
+                }`}
               >
-                {processing
-                  ? 'Processing...'
-                  : deliveryMethod === 'delivery' && !selectedZone
-                    ? 'Submit Order'
-                    : `Pay ₦${payNowAmount.toLocaleString()} with Paystack`}
-              </button>
-
-              <button
-                onClick={handleWhatsAppOrder}
-                disabled={processing}
-                className="w-full py-3 bg-[#25D366] text-white rounded-full font-semibold hover:bg-[#1ebe57] disabled:opacity-70 flex items-center justify-center gap-2"
-              >
-                <MessageCircle size={18} /> Order via WhatsApp
+                {processing ? (
+                  'Processing...'
+                ) : checkoutMode === 'whatsapp' ? (
+                  <><MessageCircle size={18} /> Send Order via WhatsApp</>
+                ) : deliveryMethod === 'delivery' && !selectedZone ? (
+                  'Submit Order'
+                ) : (
+                  `Pay ₦${payNowAmount.toLocaleString()} with Paystack`
+                )}
               </button>
             </div>
 

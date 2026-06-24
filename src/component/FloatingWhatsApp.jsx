@@ -6,7 +6,7 @@ const FloatingWhatsApp = () => {
 
   return (
     <button
-      onClick={openCart}
+      onClick={() => openCart('whatsapp')}
       className="fixed bottom-6 right-6 z-50 bg-[#25D366] text-white p-4 rounded-full shadow-2xl hover:scale-110 hover:rotate-3 transition-all duration-300 animate-bounce-slow"
       aria-label="Order via WhatsApp"
     >
