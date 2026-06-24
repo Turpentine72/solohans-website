@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  X, Minus, Plus, Trash2, ShoppingCart, CreditCard, ShieldCheck, MessageCircle,
+  X, Minus, Plus, Trash2, ShoppingCart, CreditCard, ShieldCheck, MessageCircle, Copy, Check,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { usePromos } from '../context/PromoContext';
@@ -39,6 +39,14 @@ export default function CartSidebar() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [formErrors, setFormErrors] = useState('');
   const [orderResult, setOrderResult] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  const copyOrderId = (id) => {
+    navigator.clipboard?.writeText(id).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
   const [processing, setProcessing] = useState(false);
 
   // ─── Promo calculations ─────────────────────────────────────────────────
@@ -188,39 +196,55 @@ export default function CartSidebar() {
         orderId: safeRef,
         metadata: { orderId: newOrder._id },
         onSuccess: async (transaction) => {
-          try {
-            // ✅ Absolute URL — hits Express on port 5000, not Vite's dev server
-            const res = await fetch(`${API_BASE}/payments/verify`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                reference: transaction.reference,
-                orderId: newOrder._id,
-              }),
-            });
-
-            const data = await res.json();
-
-            if (data.success) {
-              // ✅ No markPaid call — backend's verify route handles it atomically
-              // ✅ Friendly ID (e.g. SLH-0036) comes from backend response
-              setOrderResult({
-                orderId: data.order_id ?? newOrder.order_id,
-                items: cartItems,
-                total: amountToPay,
-                deliveryFee: newOrder.delivery_fee || 0,
-                freeItems,
-                deliveryMethod: newOrder.delivery_method,
+          // Paystack has already charged the customer by the time this fires —
+          // a failed verify call here must NEVER be treated as "give up",
+          // since the money is real. Retry a few times before showing the
+          // customer a support message, rather than failing on the first try.
+          const tryVerify = async (attempt = 1) => {
+            try {
+              const res = await fetch(`${API_BASE}/payments/verify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  reference: transaction.reference,
+                  orderId: newOrder._id,
+                }),
               });
-              clearCart();
-              setStep('receipt');
-            } else {
+
+              const data = await res.json();
+
+              if (data.success) {
+                setOrderResult({
+                  orderId: data.order_id ?? newOrder.order_id,
+                  items: cartItems,
+                  total: amountToPay,
+                  deliveryFee: newOrder.delivery_fee || 0,
+                  freeItems,
+                  deliveryMethod: newOrder.delivery_method,
+                });
+                clearCart();
+                setStep('receipt');
+                return;
+              }
+
+              // A real "no" from the backend (e.g. Paystack itself says not
+              // successful) — retrying won't help, show the message.
               alert(data.message || 'Payment verification failed. Please contact support.');
+            } catch (err) {
+              console.error(`Verify fetch error (attempt ${attempt}):`, err);
+              if (attempt < 4) {
+                setTimeout(() => tryVerify(attempt + 1), attempt * 1500);
+              } else {
+                alert(
+                  `Your payment may have gone through, but we couldn't confirm it automatically. ` +
+                  `Please save this reference and contact us: ${transaction.reference}. ` +
+                  `You can also check your order status on the Track Order page in a few minutes.`
+                );
+              }
             }
-          } catch (err) {
-            console.error('Verify fetch error:', err);
-            alert('Could not verify payment. Please contact support.');
-          }
+          };
+
+          tryVerify();
         },
         onClose: () => {},
       });
@@ -491,6 +515,9 @@ export default function CartSidebar() {
                 <ShoppingCart size={32} className="text-blue-600" />
               </div>
               <h3 className="text-xl font-bold text-[#222222]">Order #{orderResult.orderId} Submitted</h3>
+              <button onClick={() => copyOrderId(orderResult.orderId)} className="inline-flex items-center gap-1 text-xs text-[#C62828] mt-1 mb-2 hover:underline">
+                {copied ? <><Check size={14} /> Copied!</> : <><Copy size={14} /> Copy Order ID</>}
+              </button>
 
               {orderResult.channel === 'whatsapp' ? (
                 <>
@@ -526,6 +553,9 @@ export default function CartSidebar() {
               <div className="mb-6">
                 <div className="w-16 h-16 bg-[#C62828]/10 rounded-full flex items-center justify-center mx-auto mb-4"><ShoppingCart size={32} className="text-[#C62828]" /></div>
                 <h3 className="text-xl font-bold text-[#222222]">Order #{orderResult.orderId}</h3>
+                <button onClick={() => copyOrderId(orderResult.orderId)} className="inline-flex items-center gap-1 text-xs text-[#C62828] mt-1 hover:underline">
+                  {copied ? <><Check size={14} /> Copied!</> : <><Copy size={14} /> Copy Order ID</>}
+                </button>
                 <p className="text-gray-500">Thank you, {form.name}!</p>
                 <p className="text-sm mt-2">Payment: Online</p>
               </div>
