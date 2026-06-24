@@ -56,6 +56,7 @@ function App() {
                   <Route path="/terms" element={<Terms />} />
                   <Route path="/payment-policy" element={<PaymentPolicy />} />
                   <Route path="/track-order" element={<TrackOrder />} />
+                  <Route path="/track/:orderId" element={<TrackOrder />} />
                   <Route path="/complete-payment" element={<CompletePayment />} />
 
                   {/* Public routes with navbar & footer */}

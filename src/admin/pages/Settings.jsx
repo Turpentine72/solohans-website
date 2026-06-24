@@ -26,6 +26,7 @@ export default function Settings() {
     mapUrl: '',
     workingHours: '',
     businessHours: { enabled: false, openTime: '08:00', closeTime: '22:00' },
+    tax: { enabled: false, rate: 0 },
     social: {
       facebook: '',
       instagram: '',
@@ -92,6 +93,10 @@ export default function Settings() {
           enabled: data.businessHours?.enabled || false,
           openTime: data.businessHours?.openTime || '08:00',
           closeTime: data.businessHours?.closeTime || '22:00',
+        },
+        tax: {
+          enabled: data.tax?.enabled || false,
+          rate: data.tax?.rate || 0,
         },
         social: data.social || { facebook: '', instagram: '', tiktok: '', snapchat: '' },
       });
@@ -417,6 +422,31 @@ export default function Settings() {
                         className="w-full px-3 py-2 border rounded-xl"
                       />
                     </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="border rounded-xl p-4 bg-gray-50">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={general.tax.enabled}
+                    onChange={(e) => setGeneral(prev => ({ ...prev, tax: { ...prev.tax, enabled: e.target.checked } }))}
+                    className="w-5 h-5"
+                  />
+                  <span className="font-medium">Charge tax on orders (off by default)</span>
+                </label>
+                {general.tax.enabled && (
+                  <div>
+                    <label className="block text-sm mb-1">Tax Rate (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={general.tax.rate}
+                      onChange={(e) => setGeneral(prev => ({ ...prev, tax: { ...prev.tax, rate: Number(e.target.value) } }))}
+                      className="w-full px-3 py-2 border rounded-xl"
+                    />
                   </div>
                 )}
               </div>

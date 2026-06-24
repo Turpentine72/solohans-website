@@ -79,7 +79,7 @@ export const orders = {
     request(`/orders/${id}/payment-status`, { method: 'PATCH', body: JSON.stringify({ payment_status }) }),
   updateDeliveryFee: (id, delivery_fee) =>
     request(`/orders/${id}/delivery-fee`, { method: 'PATCH', body: JSON.stringify({ delivery_fee }) }),
-  markPaid: (id) => request(`/orders/${id}/mark-paid`, { method: 'PATCH' }),
+  setPaymentStatus: (id, payment_status) => request(`/orders/${id}/payment`, { method: 'PATCH', body: JSON.stringify({ payment_status }) }),
   restore: (id) => request(`/orders/${id}/restore`, { method: 'PATCH' }),
   delete: (id) => request(`/orders/${id}`, { method: 'DELETE' }),          // soft delete
   permanentDelete: (id) => request(`/orders/${id}/permanent`, { method: 'DELETE' }),
@@ -149,6 +149,8 @@ export const promos = {
 export const payments = {
   verify: (reference, orderId) =>
     request('/payments/verify', { method: 'POST', body: JSON.stringify({ reference, orderId }) }),
+  adminVerify: (reference, orderId) =>
+    request('/payments/admin-verify', { method: 'POST', body: JSON.stringify({ reference, orderId }) }),
 };
 
 export const deliveryZones = {

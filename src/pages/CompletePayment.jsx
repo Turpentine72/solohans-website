@@ -119,7 +119,7 @@ export default function CompletePayment() {
             <CheckCircle2 size={48} className="text-green-600 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-[#222222] mb-2">Payment Successful!</h2>
             <p className="text-gray-500 mb-4">Order #{order.order_id} is confirmed. We'll start preparing it right away.</p>
-            <Link to="/track-order" className="text-[#C62828] underline text-sm">Track your order</Link>
+            <Link to={`/track/${order.order_id}`} className="text-[#C62828] underline text-sm">Track your order</Link>
           </div>
         )}
 

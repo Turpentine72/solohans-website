@@ -92,6 +92,10 @@ export default function CartSidebar() {
   }
 
   const discountedSubtotal = subtotal - discountAmount;
+  const taxEnabled = !!settings?.tax?.enabled;
+  const taxRate = settings?.tax?.rate || 0;
+  const taxAmount = taxEnabled ? Math.round(discountedSubtotal * (taxRate / 100)) : 0;
+  const subtotalWithTax = discountedSubtotal + taxAmount;
   // ─────────────────────────────────────────────────────────────────────────
 
   const handleFormChange = (e) => {
@@ -104,7 +108,7 @@ export default function CartSidebar() {
   }, []);
 
   const selectedZone = zones.find(z => z._id === selectedZoneId) || null;
-  const payNowAmount = discountedSubtotal + (deliveryMethod === 'delivery' && selectedZone ? selectedZone.fee : 0);
+  const payNowAmount = subtotalWithTax + (deliveryMethod === 'delivery' && selectedZone ? selectedZone.fee : 0);
 
   const validateForm = () => {
     const errors = [];
@@ -146,7 +150,7 @@ export default function CartSidebar() {
       order_channel: channel,
       notes: notes.trim(),
       items: orderItems,
-      totalAmount: discountedSubtotal,
+      totalAmount: subtotalWithTax,
       paymentStatus: 'pending',
     });
 
@@ -269,20 +273,40 @@ export default function CartSidebar() {
     try {
       const newOrder = await createOrder('whatsapp');
 
+      const deliveryFeeLine = deliveryMethod === 'pickup'
+        ? 'FREE (Pickup)'
+        : selectedZone
+          ? `₦${selectedZone.fee.toLocaleString()}`
+          : 'To be confirmed by admin';
+
+      const grandTotal = payNowAmount; // items (with tax) + delivery fee, if known yet
+
       const lines = [
-        `Hi Solohans! I'd like to place an order 🍽️`,
+        `🛒 *ORDER SUMMARY*`,
         ``,
-        `*Order ID:* ${newOrder.order_id}`,
-        ...cartItems.map(item => `• ${item.name} × ${item.quantity}`),
+        `Order ID: ${newOrder.order_id}`,
+        ``,
+        `Customer:`,
+        `Name: ${form.name}`,
+        `Phone: ${form.phone}`,
+        `Address: ${deliveryMethod === 'pickup' ? 'Pickup at restaurant' : form.address}`,
+        ``,
+        `Products:`,
+        ...cartItems.map(item => `• ${item.name} ×${item.quantity}`),
         ...freeItems.map(free => `• ${free.name} (FREE)`),
         ``,
-        `*Items Total:* ₦${discountedSubtotal.toLocaleString()}`,
-        deliveryMethod === 'pickup'
-          ? `*Pickup at restaurant*`
-          : `*Delivery to:* ${form.address}${selectedZone ? ` (${selectedZone.name})` : ''}`,
-      ];
-      if (notes.trim()) lines.push(``, `*Note:* ${notes.trim()}`);
-      lines.push(``, `Name: ${form.name}`, `Phone: ${form.phone}`);
+        `Subtotal: ₦${subtotal.toLocaleString()}`,
+        discountAmount > 0 ? `Discount: -₦${Math.round(discountAmount).toLocaleString()}` : null,
+        `Delivery Fee: ${deliveryFeeLine}`,
+        taxEnabled && taxAmount > 0 ? `Tax: ₦${taxAmount.toLocaleString()}` : null,
+        `TOTAL: ₦${grandTotal.toLocaleString()}${deliveryMethod === 'delivery' && !selectedZone ? ' (+ delivery fee, TBC by admin)' : ''}`,
+        ``,
+        `Payment Status: UNPAID`,
+      ].filter(line => line !== null);
+
+      if (notes.trim()) lines.push(``, `Note: ${notes.trim()}`);
+
+      lines.push(``, `Track Order:`, `${window.location.origin}/track/${newOrder.order_id}`);
 
       const message = encodeURIComponent(lines.join('\n'));
       const whatsappNumber = (settings?.whatsapp || '+234 808 194 1298').replace(/[^\d]/g, '');
@@ -391,9 +415,15 @@ export default function CartSidebar() {
                       🚚 Free Delivery Applied!
                     </div>
                   )}
+                  {taxEnabled && taxAmount > 0 && (
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Tax ({taxRate}%)</span>
+                      <span>₦{taxAmount.toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-lg font-bold">
                     <span>Items Total</span>
-                    <span className="text-[#C62828]">₦{discountedSubtotal.toLocaleString()}</span>
+                    <span className="text-[#C62828]">₦{subtotalWithTax.toLocaleString()}</span>
                   </div>
                   <p className="text-xs text-gray-500">Choose Delivery or Pickup at the next step.</p>
                 </div>
@@ -543,7 +573,7 @@ export default function CartSidebar() {
                 </>
               )}
 
-              <Link to="/track-order" onClick={handlePlaceOrder} className="w-full inline-block py-3 mb-3 border-2 border-[#C62828] text-[#C62828] rounded-full font-semibold hover:bg-[#FFF8F0]">Track This Order</Link>
+              <Link to={`/track/${orderResult.orderId}`} onClick={handlePlaceOrder} className="w-full inline-block py-3 mb-3 border-2 border-[#C62828] text-[#C62828] rounded-full font-semibold hover:bg-[#FFF8F0]">Track This Order</Link>
               <button onClick={handlePlaceOrder} className="w-full py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C]">Close & Continue Shopping</button>
             </div>
           )}
@@ -589,7 +619,7 @@ export default function CartSidebar() {
                 <p className="text-xs text-gray-500 mb-4">🚚 Delivering to: {form.address}</p>
               )}
 
-              <Link to="/track-order" onClick={handlePlaceOrder} className="w-full inline-block py-3 mb-3 border-2 border-[#C62828] text-[#C62828] rounded-full font-semibold hover:bg-[#FFF8F0]">Track This Order</Link>
+              <Link to={`/track/${orderResult.orderId}`} onClick={handlePlaceOrder} className="w-full inline-block py-3 mb-3 border-2 border-[#C62828] text-[#C62828] rounded-full font-semibold hover:bg-[#FFF8F0]">Track This Order</Link>
 
               <button onClick={handlePlaceOrder} className="w-full py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C]">Close & Continue Shopping</button>
             </div>

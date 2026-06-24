@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Link } from 'react-router-dom';
-import { Search, Clock } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
+import { Search, Clock, Copy, Check } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import heroImage from '../assets/photo-1540189549336-e6e99c3679fe.avif';
 
@@ -9,7 +9,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api
 
 const statusSteps = [
   { key: 'Pending', label: 'Placed' },
-  { key: 'Paid', label: 'Confirmed' },
+  { key: 'Confirmed', label: 'Confirmed' },
   { key: 'Processing', label: 'Preparing' },
   { key: 'Out for Delivery', label: 'On the way' },
   { key: 'Delivered', label: 'Delivered' },
@@ -17,9 +17,11 @@ const statusSteps = [
 
 export default function TrackOrder() {
   const { settings } = useSettings();
-  const [orderId, setOrderId] = useState('');
+  const { orderId: orderIdFromUrl } = useParams();
+  const [orderId, setOrderId] = useState(orderIdFromUrl || '');
   const [email, setEmail] = useState('');
   const [order, setOrder] = useState(null);
+  const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -48,7 +50,11 @@ export default function TrackOrder() {
 
   const getCurrentStepIndex = () => {
     if (!order) return 0;
-    const found = statusSteps.findIndex(s => s.key === order.status);
+    // Legacy orders created before payment/verification were split out may
+    // still have status: 'Paid' stored as a fulfillment stage — treat that
+    // the same as 'Confirmed' for the progress bar.
+    const effectiveStatus = order.status === 'Paid' ? 'Confirmed' : order.status;
+    const found = statusSteps.findIndex(s => s.key === effectiveStatus);
     return found >= 0 ? found : 0;
   };
 
@@ -131,6 +137,9 @@ export default function TrackOrder() {
                 className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:border-[#C62828]"
               />
             </div>
+            {orderIdFromUrl && !order && (
+              <p className="text-xs text-gray-500 mt-2">Order ID filled in for you — just add the email you used at checkout.</p>
+            )}
             <button
               type="submit"
               disabled={loading}
@@ -146,14 +155,43 @@ export default function TrackOrder() {
               <div className="flex flex-wrap justify-between items-start">
                 <div>
                   <h2 className="text-xl font-bold">Order #{order.order_id}</h2>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard?.writeText(order.order_id).then(() => {
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      });
+                    }}
+                    className="inline-flex items-center gap-1 text-xs text-[#C62828] hover:underline"
+                  >
+                    {copied ? <><Check size={14} /> Copied!</> : <><Copy size={14} /> Copy Order ID</>}
+                  </button>
                   <p className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
                 </div>
-                <span className="px-4 py-2 bg-[#C62828]/10 text-[#C62828] font-bold rounded-full text-sm">
+                <span className={`px-4 py-2 font-bold rounded-full text-sm ${order.status === 'Cancelled' ? 'bg-red-100 text-red-700' : 'bg-[#C62828]/10 text-[#C62828]'}`}>
                   {order.status}
                 </span>
               </div>
 
-              {/* Status progress bar */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-gray-50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Order Status</p>
+                  <p className="font-semibold text-sm mt-1">{order.status}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Payment Status</p>
+                  <p className="font-semibold text-sm mt-1">{order.payment_status === 'paid' ? 'Paid' : 'Unpaid'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Verification</p>
+                  <p className={`font-semibold text-sm mt-1 ${order.verification_status === 'Verified' ? 'text-green-600' : ''}`}>
+                    {order.verification_status === 'Verified' ? '✅ Verified' : 'Not Verified'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Status progress bar — skipped for cancelled orders */}
+              {order.status !== 'Cancelled' && (
               <div className="flex items-center justify-between mt-4">
                 {statusSteps.map((step, idx) => {
                   const isCompleted = idx <= getCurrentStepIndex();
@@ -170,6 +208,7 @@ export default function TrackOrder() {
                   );
                 })}
               </div>
+              )}
 
               <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>

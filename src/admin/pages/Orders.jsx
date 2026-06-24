@@ -4,7 +4,7 @@ import {
   Search, Eye, X, CreditCard, AlertTriangle, History,
   Trash2, RefreshCw, Calendar, ArrowRight
 } from 'lucide-react';
-import { orders as ordersApi } from '../../lib/api';
+import { orders as ordersApi, payments as paymentsApi } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 
 const orderTypeIcons = {
@@ -23,11 +23,15 @@ const statusColor = (status) => {
 };
 
 const allowedNextStatus = {
-  'Pending': [],
-  'Paid': ['Processing'],
-  'Processing': ['Out for Delivery'],
+  'Pending': ['Confirmed', 'Processing', 'Cancelled'],
+  'Confirmed': ['Processing', 'Cancelled'],
+  'Processing': ['Out for Delivery', 'Cancelled'],
   'Out for Delivery': ['Delivered'],
-  'Delivered': []
+  'Delivered': [],
+  'Cancelled': [],
+  // Legacy bridge for orders created before payment/verification were split
+  // out from the fulfillment status field.
+  'Paid': ['Confirmed', 'Processing', 'Cancelled'],
 };
 
 const MONTHS = [
@@ -46,6 +50,31 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [updating, setUpdating] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState(0);
+  const [recoveryRef, setRecoveryRef] = useState('');
+  const [recovering, setRecovering] = useState(false);
+
+  const handleAdminVerify = async (order) => {
+    if (!recoveryRef.trim()) {
+      alert('Paste the Paystack reference for this payment first.');
+      return;
+    }
+    setRecovering(true);
+    try {
+      const result = await paymentsApi.adminVerify(recoveryRef.trim(), order._id);
+      if (result.success) {
+        alert(result.alreadyPaid ? 'This order was already marked paid.' : 'Payment confirmed and order marked paid!');
+        setRecoveryRef('');
+        setSelectedOrder(null);
+        fetchOrders();
+      } else {
+        alert(result.message || 'Could not verify this reference.');
+      }
+    } catch (err) {
+      alert(err.message || 'Verification failed.');
+    } finally {
+      setRecovering(false);
+    }
+  };
   const [updatingFee, setUpdatingFee] = useState(false);
 
   // Month / year filter
@@ -77,6 +106,20 @@ export default function Orders() {
       await fetchOrders();
     } catch (err) {
       alert('Failed to update status');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const updatePaymentStatus = async (orderId, payment_status) => {
+    const verb = payment_status === 'paid' ? 'Mark as Paid (this also permanently locks Verification)' : 'Mark as Unpaid';
+    if (!window.confirm(`${verb}?`)) return;
+    setUpdating(true);
+    try {
+      await ordersApi.setPaymentStatus(orderId, payment_status);
+      await fetchOrders();
+    } catch (err) {
+      alert(err.message || 'Failed to update payment status');
     } finally {
       setUpdating(false);
     }
@@ -357,6 +400,64 @@ export default function Orders() {
                   <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl text-sm">
                     <p className="text-xs text-amber-700 font-semibold mb-1">📝 Customer Note</p>
                     <p className="text-amber-900">{selectedOrder.notes}</p>
+                  </div>
+                )}
+
+                <div className="border rounded-xl p-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-gray-500">Payment</p>
+                    <p className="font-medium">{selectedOrder.payment_status === 'paid' ? '✅ Paid' : '⏳ Unpaid'}</p>
+                    <p className="text-xs text-gray-500 mt-1">Verification</p>
+                    <p className={`font-medium ${selectedOrder.verification_status === 'Verified' ? 'text-green-600' : 'text-gray-500'}`}>
+                      {selectedOrder.verification_status === 'Verified' ? '🔒 Verified (locked)' : 'Not Verified'}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {selectedOrder.verification_status !== 'Verified' && (
+                      <>
+                        <button
+                          onClick={() => updatePaymentStatus(selectedOrder._id, 'paid')}
+                          disabled={updating}
+                          className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 disabled:opacity-50 whitespace-nowrap"
+                        >
+                          Mark as Paid
+                        </button>
+                        {selectedOrder.payment_status === 'paid' && (
+                          <button
+                            onClick={() => updatePaymentStatus(selectedOrder._id, 'unpaid')}
+                            disabled={updating}
+                            className="px-4 py-2 border border-gray-300 rounded-xl text-sm font-medium hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
+                          >
+                            Mark as Unpaid
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {selectedOrder.payment_status !== 'paid' && (
+                  <div className="bg-red-50 border border-red-200 p-3 rounded-xl text-sm space-y-2">
+                    <p className="text-xs text-red-700 font-semibold">
+                      ⚠️ Not yet marked paid. If the customer says they paid but it's not showing here,
+                      check the Paystack dashboard for a matching transaction and paste its reference below.
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Paystack reference (e.g. order_...)"
+                        value={recoveryRef}
+                        onChange={(e) => setRecoveryRef(e.target.value)}
+                        className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                      />
+                      <button
+                        onClick={() => handleAdminVerify(selectedOrder)}
+                        disabled={recovering}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 disabled:opacity-60"
+                      >
+                        {recovering ? 'Checking...' : 'Verify & Mark Paid'}
+                      </button>
+                    </div>
                   </div>
                 )}
 

@@ -25,10 +25,9 @@ export default function PaymentVerification() {
     setError(null);
     try {
       const allOrders = await ordersApi.getAll({ deleted: 'true' });
-      // ✅ Use payment_status (whether money was received) rather than the
-      // fulfillment "status" field — a paid order must stay listed here
-      // permanently even after it moves to Processing/Out for Delivery/Delivered.
-      const verified = allOrders.filter(order => order.payment_status === 'paid');
+      // ✅ verification_status is the authoritative, permanently-locked field —
+      // a verified order stays listed here forever regardless of fulfillment stage.
+      const verified = allOrders.filter(order => order.verification_status === 'Verified');
       setPayments(verified);
     } catch (err) {
       console.error('Error fetching payments:', err);
