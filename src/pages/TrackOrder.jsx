@@ -7,12 +7,19 @@ import heroImage from '../assets/photo-1540189549336-e6e99c3679fe.avif';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
-const statusSteps = [
+const deliveryStatusSteps = [
   { key: 'Pending', label: 'Placed' },
   { key: 'Confirmed', label: 'Confirmed' },
   { key: 'Processing', label: 'Preparing' },
   { key: 'Out for Delivery', label: 'On the way' },
   { key: 'Delivered', label: 'Delivered' },
+];
+
+const pickupStatusSteps = [
+  { key: 'Pending', label: 'Placed' },
+  { key: 'Processing', label: 'Preparing' },
+  { key: 'Ready for Pickup', label: 'Ready for Pickup' },
+  { key: 'Completed', label: 'Completed' },
 ];
 
 export default function TrackOrder() {
@@ -48,12 +55,16 @@ export default function TrackOrder() {
     }
   };
 
+  const statusSteps = order?.delivery_method === 'pickup' ? pickupStatusSteps : deliveryStatusSteps;
+
   const getCurrentStepIndex = () => {
     if (!order) return 0;
     // Legacy orders created before payment/verification were split out may
     // still have status: 'Paid' stored as a fulfillment stage — treat that
-    // the same as 'Confirmed' for the progress bar.
-    const effectiveStatus = order.status === 'Paid' ? 'Confirmed' : order.status;
+    // the same as the first post-pending stage for the progress bar.
+    const effectiveStatus = order.status === 'Paid'
+      ? (order.delivery_method === 'pickup' ? 'Processing' : 'Confirmed')
+      : order.status;
     const found = statusSteps.findIndex(s => s.key === effectiveStatus);
     return found >= 0 ? found : 0;
   };

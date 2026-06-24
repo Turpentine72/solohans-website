@@ -22,7 +22,7 @@ const statusColor = (status) => {
   }
 };
 
-const allowedNextStatus = {
+const deliveryNextStatus = {
   'Pending': ['Confirmed', 'Processing', 'Cancelled'],
   'Confirmed': ['Processing', 'Cancelled'],
   'Processing': ['Out for Delivery', 'Cancelled'],
@@ -32,6 +32,15 @@ const allowedNextStatus = {
   // Legacy bridge for orders created before payment/verification were split
   // out from the fulfillment status field.
   'Paid': ['Confirmed', 'Processing', 'Cancelled'],
+};
+
+const pickupNextStatus = {
+  'Pending': ['Processing', 'Cancelled'],
+  'Processing': ['Ready for Pickup', 'Cancelled'],
+  'Ready for Pickup': ['Completed'],
+  'Completed': [],
+  'Cancelled': [],
+  'Paid': ['Processing', 'Cancelled'],
 };
 
 const MONTHS = [
@@ -378,11 +387,15 @@ export default function Orders() {
                   <div><p className="text-xs text-gray-500">Email</p><p className="font-medium">{selectedOrder.customerEmail || 'N/A'}</p></div>
                   <div><p className="text-xs text-gray-500">Address</p><p className="font-medium">{selectedOrder.address || 'N/A'}</p></div>
                   <div><p className="text-xs text-gray-500">Order Channel</p><p className="font-medium">{selectedOrder.order_channel === 'whatsapp' ? '💬 WhatsApp' : '💳 Online'}</p></div>
-                  <div><p className="text-xs text-gray-500">Order Type</p><p className="font-medium">Card</p></div>
+                  <div><p className="text-xs text-gray-500">Order Type</p><p className="font-medium">{selectedOrder.delivery_method === 'pickup' ? '🏪 Pickup' : '🚚 Delivery'}</p></div>
                   <div><p className="text-xs text-gray-500">Food Total</p><p className="font-medium">₦{selectedOrder.totalAmount?.toLocaleString()}</p></div>
                 </div>
 
-                {selectedOrder.freeDelivery ? (
+                {selectedOrder.delivery_method === 'pickup' ? (
+                  <div className="border rounded-lg p-4 bg-gray-50">
+                    <p className="text-sm font-medium text-gray-600">🏪 Pickup order – no delivery fee applies.</p>
+                  </div>
+                ) : selectedOrder.freeDelivery ? (
                   <div className="border rounded-lg p-4 bg-green-50">
                     <p className="text-sm font-medium text-green-700">🚚 Free delivery was applied – no delivery fee to set.</p>
                   </div>
@@ -477,16 +490,22 @@ export default function Orders() {
                 )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Update Status</label>
-                  {selectedOrder.status === 'Delivered' ? (
-                    <div className="w-full px-4 py-3 bg-gray-100 rounded-xl text-gray-500 text-sm">Completed</div>
-                  ) : allowedNextStatus[selectedOrder.status]?.length === 0 ? (
-                    <div className="w-full px-4 py-3 bg-gray-100 rounded-xl text-gray-500 text-sm">No changes available</div>
-                  ) : (
-                    <select value={selectedOrder.status} onChange={e => updateStatus(selectedOrder._id, e.target.value)} disabled={updating} className="w-full px-4 py-3 border rounded-xl">
-                      <option value={selectedOrder.status} disabled>Current: {selectedOrder.status}</option>
-                      {allowedNextStatus[selectedOrder.status]?.map(nextStatus => <option key={nextStatus} value={nextStatus}>{nextStatus}</option>)}
-                    </select>
-                  )}
+                  {(() => {
+                    const nextStatusMap = selectedOrder.delivery_method === 'pickup' ? pickupNextStatus : deliveryNextStatus;
+                    const isTerminal = selectedOrder.status === 'Delivered' || selectedOrder.status === 'Completed' || selectedOrder.status === 'Cancelled';
+                    if (isTerminal) {
+                      return <div className="w-full px-4 py-3 bg-gray-100 rounded-xl text-gray-500 text-sm">{selectedOrder.status}</div>;
+                    }
+                    if (nextStatusMap[selectedOrder.status]?.length === 0) {
+                      return <div className="w-full px-4 py-3 bg-gray-100 rounded-xl text-gray-500 text-sm">No changes available</div>;
+                    }
+                    return (
+                      <select value={selectedOrder.status} onChange={e => updateStatus(selectedOrder._id, e.target.value)} disabled={updating} className="w-full px-4 py-3 border rounded-xl">
+                        <option value={selectedOrder.status} disabled>Current: {selectedOrder.status}</option>
+                        {nextStatusMap[selectedOrder.status]?.map(nextStatus => <option key={nextStatus} value={nextStatus}>{nextStatus}</option>)}
+                      </select>
+                    );
+                  })()}
                 </div>
               </div>
               <div className="flex justify-end p-5 border-t"><button onClick={() => setSelectedOrder(null)} className="px-6 py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C]">Close</button></div>
