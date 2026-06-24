@@ -7,6 +7,7 @@ export default function Footer() {
   const { settings } = useSettings();
 
   const name = settings?.name || 'SOLOHANS DELICIOUS MEAL';
+  const tagline = settings?.tagline || 'Delicious Meals';
   const logo = settings?.logo || '';
   const phone = settings?.phone || '+234 903 341 9872';
   const email = settings?.email || 'info@solohans.com';
@@ -22,7 +23,8 @@ export default function Footer() {
             {logo && (
               <img src={logo} alt={name} className="h-12 w-auto object-contain mb-3" />
             )}
-            <h3 className="text-xl font-bold uppercase tracking-wide mb-4">{name}</h3>
+            <h3 className="text-xl font-bold uppercase tracking-wide mb-1">{name}</h3>
+            <p className="text-[#C62828] text-sm font-medium mb-4">{tagline}</p>
             <p className="text-gray-400 text-sm leading-7">
               Fresh, delicious meals delivered to your doorstep in Surulere, Lagos.
               Taste the difference with every bite.
