@@ -24,7 +24,7 @@ const Menu = () => {
   const [dishes, setDishes] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { addToCart } = useCart();
+  const { addToCart, openCart } = useCart();
   const { activePromos } = usePromos();
 
   useEffect(() => {
@@ -109,11 +109,6 @@ const Menu = () => {
   const filteredDishes = activeCategory === "all"
     ? dishes
     : dishes.filter((dish) => dish.categoryLower === activeCategory.toLowerCase());
-
-  const getWhatsAppLink = (dishName) => {
-    const message = `Hello, I would like to order ${dishName} from Solohans Delicious Meals.`;
-    return `https://wa.me/2348081941298?text=${encodeURIComponent(message)}`;
-  };
 
   const heroWords = ["Our", "Menu"];
 
@@ -249,15 +244,13 @@ const Menu = () => {
                             <ShoppingCart size={16} />
                             Order Now
                           </button>
-                          <a
-                            href={getWhatsAppLink(dish.name)}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            onClick={() => { addToCart(dish); openCart('whatsapp'); }}
                             className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-[#C62828] text-[#C62828] text-sm font-semibold hover:bg-[#C62828] hover:text-white transition-colors"
                           >
                             <Send size={16} />
                             Order on WhatsApp
-                          </a>
+                          </button>
                         </div>
                       </div>
                     </div>
