@@ -17,8 +17,13 @@ import {
   Gift,
   Image,
   X,
+  UserCog,
+  Package,
+  ClipboardCheck,
+  History,
 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
+import { useAuth } from '../context/AuthContext';
 import defaultLogo from '../../assets/5e82d2b1-ebb5-4e77-8fa1-91fae5baab69.png';
 
 const navItems = [
@@ -34,6 +39,10 @@ const navItems = [
   { label: 'Promotions', icon: <Gift size={20} />, path: '/admin/promotions' },
   { label: 'Gallery', icon: <Image size={20} />, path: '/admin/gallery' },
   { label: 'Delivery Zones', icon: <Truck size={20} />, path: '/admin/delivery-zones' },
+  { label: 'Stock Management', icon: <Package size={20} />, path: '/admin/stock', roles: ['admin', 'storekeeper'] },
+  { label: 'Day Reconciliation', icon: <ClipboardCheck size={20} />, path: '/admin/reconciliation', roles: ['admin', 'closing_staff'] },
+  { label: 'Staff Management', icon: <UserCog size={20} />, path: '/admin/staff', roles: ['admin'] },
+  { label: 'Audit Log', icon: <History size={20} />, path: '/admin/audit-log', roles: ['admin'] },
   { label: 'Legal Pages', path: '/admin/legal', icon: <FileText size={18} /> },
   { label: 'Reports & Analytics', icon: <BarChart3 size={20} />, path: '/admin/reports' },
   { label: 'Settings', icon: <Settings size={20} />, path: '/admin/settings' },
@@ -42,6 +51,9 @@ const navItems = [
 export default function Sidebar({ isOpen, toggle }) {
   const location = useLocation();
   const { settings } = useSettings(); // ✅ dynamic settings
+  const { session } = useAuth();
+  const role = session?.role || 'admin';
+  const visibleNavItems = navItems.filter(item => !item.roles || item.roles.includes(role));
 
   // Use settings logo if available, otherwise fallback to default
   const logo = settings?.logo || defaultLogo;
@@ -88,7 +100,7 @@ export default function Sidebar({ isOpen, toggle }) {
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-          {navItems.map((item, index) => {
+          {visibleNavItems.map((item, index) => {
             const isActive =
               location.pathname === item.path ||
               location.pathname.startsWith(item.path + '/');

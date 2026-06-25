@@ -42,6 +42,31 @@ export const auth = {
     } catch { clearToken(); return null; }
   },
   requestPasswordReset: (email) => request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+  changePassword: (currentPassword, newPassword) =>
+    request('/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) }),
+};
+
+export const staff = {
+  getAll: () => request('/staff'),
+  create: (body) => request('/staff', { method: 'POST', body: JSON.stringify(body) }),
+  changeRole: (id, role) => request(`/staff/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  resetPassword: (id, newPassword) => request(`/staff/${id}/reset-password`, { method: 'PATCH', body: JSON.stringify({ newPassword }) }),
+  delete: (id) => request(`/staff/${id}`, { method: 'DELETE' }),
+};
+
+export const stock = {
+  getToday: () => request('/stock/today'),
+  setOpening: (items) => request('/stock/opening', { method: 'POST', body: JSON.stringify({ items }) }),
+};
+
+export const reconciliation = {
+  getExpected: () => request('/reconciliation/expected'),
+  closeDay: (actualCounts) => request('/reconciliation/close-day', { method: 'POST', body: JSON.stringify({ actualCounts }) }),
+  getHistory: () => request('/reconciliation/history'),
+};
+
+export const auditLogs = {
+  getAll: () => request('/audit-logs'),
 };
 
 // ─── MENU ITEMS ───────────────────────────────────────────────────────────────
