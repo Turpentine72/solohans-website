@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
+import AttendanceWidget from '../components/AttendanceWidget';
 import { Menu } from 'lucide-react';
 import { setupAdminPushNotifications } from '../../lib/firebase';
+import { useAuth } from '../context/AuthContext';
 
 export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { session } = useAuth();
 
   useEffect(() => {
     // Ask once per admin session. If permission is already granted from a
@@ -36,9 +39,12 @@ export default function AdminLayout({ children }) {
             <Menu size={24} />
           </button>
           <h2 className="text-lg font-semibold text-gray-800">Admin Panel</h2>
-          {/* Dark mode toggle placeholder / user menu */}
           <div className="flex items-center gap-4">
-            {/* Example: Notification icon, user avatar */}
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-medium text-gray-800">{session?.name || session?.email}</p>
+              <p className="text-xs text-gray-500 capitalize">{session?.role} • {new Date().toLocaleDateString()}</p>
+            </div>
+            <AttendanceWidget />
           </div>
         </header>
 

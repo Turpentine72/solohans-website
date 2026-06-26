@@ -21,6 +21,8 @@ import {
   Package,
   ClipboardCheck,
   History,
+  ChefHat,
+  UserCircle,
 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
@@ -42,7 +44,11 @@ const navItems = [
   { label: 'Stock Management', icon: <Package size={20} />, path: '/admin/stock', roles: ['admin', 'storekeeper'] },
   { label: 'Day Reconciliation', icon: <ClipboardCheck size={20} />, path: '/admin/reconciliation', roles: ['admin', 'closing_staff'] },
   { label: 'Staff Management', icon: <UserCog size={20} />, path: '/admin/staff', roles: ['admin'] },
+  { label: 'Staff History', icon: <History size={20} />, path: '/admin/staff-history', roles: ['admin'] },
+  { label: 'Kitchen', icon: <ChefHat size={20} />, path: '/admin/kitchen', roles: ['admin', 'chef'] },
+  { label: 'My Deliveries', icon: <Truck size={20} />, path: '/admin/deliveries', roles: ['admin', 'delivery_staff'] },
   { label: 'Audit Log', icon: <History size={20} />, path: '/admin/audit-log', roles: ['admin'] },
+  { label: 'My Profile', icon: <UserCircle size={20} />, path: '/admin/profile' },
   { label: 'Legal Pages', path: '/admin/legal', icon: <FileText size={18} /> },
   { label: 'Reports & Analytics', icon: <BarChart3 size={20} />, path: '/admin/reports' },
   { label: 'Settings', icon: <Settings size={20} />, path: '/admin/settings' },

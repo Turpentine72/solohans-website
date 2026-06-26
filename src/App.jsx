@@ -38,6 +38,10 @@ import StaffManagement from "./admin/pages/StaffManagement";
 import StockManagement from "./admin/pages/StockManagement";
 import Reconciliation from "./admin/pages/Reconciliation";
 import AuditLog from "./admin/pages/AuditLog";
+import Profile from "./admin/pages/Profile";
+import StaffHistory from "./admin/pages/StaffHistory";
+import ChefDashboard from "./admin/pages/ChefDashboard";
+import DeliveryDashboard from "./admin/pages/DeliveryDashboard";
 import AdminPayout from "./admin/pages/AdminPayout"; // 🆕 Payout page
 import Login from "./admin/pages/Login";
 import ForgotPassword from "./admin/pages/ForgotPassword";
@@ -108,6 +112,10 @@ function App() {
                             <Route path="reconciliation" element={<ProtectedRoute allowedRoles={['admin', 'closing_staff']}><Reconciliation /></ProtectedRoute>} />
                             <Route path="staff" element={<ProtectedRoute allowedRoles={['admin']}><StaffManagement /></ProtectedRoute>} />
                             <Route path="audit-log" element={<ProtectedRoute allowedRoles={['admin']}><AuditLog /></ProtectedRoute>} />
+                            <Route path="profile" element={<Profile />} />
+                            <Route path="staff-history" element={<ProtectedRoute allowedRoles={['admin']}><StaffHistory /></ProtectedRoute>} />
+                            <Route path="kitchen" element={<ProtectedRoute allowedRoles={['admin', 'chef']}><ChefDashboard /></ProtectedRoute>} />
+                            <Route path="deliveries" element={<ProtectedRoute allowedRoles={['admin', 'delivery_staff']}><DeliveryDashboard /></ProtectedRoute>} />
                             <Route path="reports" element={<Reports />} />
                             <Route path="settings" element={<Settings />} />
                             <Route path="legal" element={<Legal />} />

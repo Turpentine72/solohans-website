@@ -42,8 +42,20 @@ export const auth = {
     } catch { clearToken(); return null; }
   },
   requestPasswordReset: (email) => request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
-  changePassword: (currentPassword, newPassword) =>
-    request('/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) }),
+  requestChangePassword: (currentPassword, newPassword, confirmPassword) =>
+    request('/auth/change-password/request', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword, confirmPassword }) }),
+  resendChangePasswordOtp: () => request('/auth/change-password/resend', { method: 'POST' }),
+  verifyChangePassword: (otp) => request('/auth/change-password/verify', { method: 'POST', body: JSON.stringify({ otp }) }),
+};
+
+export const attendance = {
+  getToday: () => request('/attendance/today'),
+  checkIn: () => request('/attendance/check-in', { method: 'POST' }),
+  checkOut: (tasksCompleted) => request('/attendance/check-out', { method: 'POST', body: JSON.stringify({ tasksCompleted }) }),
+  getHistory: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/attendance/history${q ? '?' + q : ''}`);
+  },
 };
 
 export const staff = {

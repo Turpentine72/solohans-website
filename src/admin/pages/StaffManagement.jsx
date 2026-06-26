@@ -8,6 +8,8 @@ const ROLE_LABELS = {
   cashier: 'Cashier',
   storekeeper: 'Store Keeper',
   closing_staff: 'Closing Staff',
+  chef: 'Chef',
+  delivery_staff: 'Delivery Staff',
 };
 
 export default function StaffManagement() {
