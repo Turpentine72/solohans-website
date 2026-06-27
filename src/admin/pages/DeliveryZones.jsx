@@ -90,7 +90,7 @@ export default function DeliveryZones() {
         ) : zones.length === 0 ? (
           <div className="text-center py-12 text-gray-500">No delivery zones yet. Add one to start auto-calculating fees.</div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-gray-50 text-gray-500 text-sm">
                 <tr>

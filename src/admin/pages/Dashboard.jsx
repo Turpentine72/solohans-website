@@ -76,7 +76,7 @@ export default function Dashboard() {
         const orderDate = new Date(order.createdAt);
         if (orderDate >= startOfWeek && order.status === 'Delivered') {
           const dayName = days[orderDate.getDay()];
-          weeklyMap.set(dayName, weeklyMap.get(dayName) + (order.total_amount || 0));
+          weeklyMap.set(dayName, weeklyMap.get(dayName) + (order.totalAmount || 0));
         }
       });
 

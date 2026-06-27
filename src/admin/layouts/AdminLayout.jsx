@@ -25,13 +25,13 @@ export default function AdminLayout({ children }) {
   }, []);
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="min-h-screen flex bg-gray-100">
       <Sidebar isOpen={sidebarOpen} toggle={() => setSidebarOpen(!sidebarOpen)} />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Header */}
-        <header className="bg-white shadow-sm p-4 flex items-center justify-between">
+      <div className="flex-1 flex flex-col min-h-screen w-full">
+        {/* Top Header — sticky so it stays visible while the page scrolls naturally */}
+        <header className="bg-white shadow-sm p-4 flex items-center justify-between sticky top-0 z-20">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="lg:hidden text-gray-700"
@@ -48,8 +48,14 @@ export default function AdminLayout({ children }) {
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        {/* Page Content — natural document flow so the whole page scrolls
+            smoothly on mobile (iOS/Android), instead of relying on a nested
+            fixed-height scroll region that can lock up on some mobile
+            browsers and installed PWAs. */}
+        <main
+          className="flex-1 p-4 sm:p-6 w-full overflow-x-hidden"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {children}
         </main>
       </div>

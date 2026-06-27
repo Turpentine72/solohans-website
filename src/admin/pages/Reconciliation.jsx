@@ -63,7 +63,7 @@ export default function Reconciliation() {
           </div>
         ) : (
           <>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto mb-6">
               <table className="w-full text-left">
                 <thead className="bg-gray-50 text-gray-500 text-sm">
                   <tr>
@@ -117,7 +117,7 @@ export default function Reconciliation() {
         {history.length > 0 && (
           <div className="mt-10">
             <h2 className="text-xl font-bold text-gray-800 mb-3">Past Reconciliations</h2>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-gray-50 text-gray-500 text-sm">
                   <tr><th className="py-3 px-4">Date</th><th className="py-3 px-4">Status</th><th className="py-3 px-4">Items</th></tr>

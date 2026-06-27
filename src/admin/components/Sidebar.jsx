@@ -74,7 +74,7 @@ export default function Sidebar({ isOpen, toggle }) {
       )}
 
       <aside
-        className={`fixed top-0 left-0 z-50 h-screen w-72 bg-[#1E1E2D] text-white flex flex-col
+        className={`fixed top-0 left-0 z-50 h-screen lg:h-auto lg:min-h-screen w-72 bg-[#1E1E2D] text-white flex flex-col
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:static lg:z-auto`}
