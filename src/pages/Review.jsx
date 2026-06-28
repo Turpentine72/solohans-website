@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { Star, ShoppingCart } from "lucide-react";
 import { reviews as reviewsApi } from "../lib/api";
 import { useSettings } from "../context/SettingsContext";       // ✅ for WhatsApp number
+import { useCart } from "../context/CartContext";
 import heroImage from "../assets/photo-1552566626-52f8b828add9.avif";
 
 const StarRating = ({ rating }) => (
@@ -23,6 +24,8 @@ const Review = () => {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const { settings } = useSettings();                          // ✅ get settings
+  const { openCart } = useCart();
+
 
   useEffect(() => { fetchApprovedReviews(); }, []);
 
@@ -63,8 +66,6 @@ const Review = () => {
   const avgRating = reviewList.length > 0
     ? (reviewList.reduce((sum, r) => sum + r.rating, 0) / reviewList.length).toFixed(1)
     : "4.8";
-
-  const whatsapp = settings?.whatsapp || settings?.phone || "2348081941298";  // ✅ fallback
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -231,14 +232,12 @@ const Review = () => {
             You can also place your order directly on WhatsApp, Instagram, Facebook, or any of our social media platforms.
             We'll respond quickly and confirm your order.
           </p>
-          <a
-            href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => openCart('whatsapp')}
             className="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-green-700 transition-colors"
           >
             Order on WhatsApp
-          </a>
+          </button>
         </div>
       </section>
 
