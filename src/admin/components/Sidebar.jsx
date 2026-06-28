@@ -23,6 +23,7 @@ import {
   History,
   ChefHat,
   UserCircle,
+  Receipt,
 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
@@ -43,6 +44,7 @@ const navItems = [
   { label: 'Delivery Zones', icon: <Truck size={20} />, path: '/admin/delivery-zones' },
   { label: 'Stock Management', icon: <Package size={20} />, path: '/admin/stock', roles: ['admin', 'storekeeper'] },
   { label: 'Day Reconciliation', icon: <ClipboardCheck size={20} />, path: '/admin/reconciliation', roles: ['admin', 'closing_staff'] },
+  { label: 'Expenses', icon: <Receipt size={20} />, path: '/admin/expenses', roles: ['admin', 'closing_staff'] },
   { label: 'Staff Management', icon: <UserCog size={20} />, path: '/admin/staff', roles: ['admin'] },
   { label: 'Staff History', icon: <History size={20} />, path: '/admin/staff-history', roles: ['admin'] },
   { label: 'Kitchen', icon: <ChefHat size={20} />, path: '/admin/kitchen', roles: ['admin', 'chef'] },
