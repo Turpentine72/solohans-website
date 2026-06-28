@@ -81,6 +81,16 @@ export const auditLogs = {
   getAll: () => request('/audit-logs'),
 };
 
+export const expenses = {
+  getAll: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/expenses${q ? '?' + q : ''}`);
+  },
+  create: (body) => request('/expenses', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id, body) => request(`/expenses/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  delete: (id) => request(`/expenses/${id}`, { method: 'DELETE' }),
+};
+
 // ─── MENU ITEMS ───────────────────────────────────────────────────────────────
 export const menuItems = {
   getAll: (params = {}) => {
