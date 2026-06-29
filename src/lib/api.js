@@ -61,9 +61,16 @@ export const attendance = {
 export const staff = {
   getAll: () => request('/staff'),
   create: (body) => request('/staff', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id, body) => request(`/staff/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   changeRole: (id, role) => request(`/staff/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
   resetPassword: (id, newPassword) => request(`/staff/${id}/reset-password`, { method: 'PATCH', body: JSON.stringify({ newPassword }) }),
   delete: (id) => request(`/staff/${id}`, { method: 'DELETE' }),
+};
+
+export const roles = {
+  getAll: () => request('/roles'),
+  create: (label) => request('/roles', { method: 'POST', body: JSON.stringify({ label }) }),
+  delete: (id) => request(`/roles/${id}`, { method: 'DELETE' }),
 };
 
 export const stock = {
