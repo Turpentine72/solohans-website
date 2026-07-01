@@ -90,6 +90,19 @@ export default function Orders() {
   const [selectedMonth, setSelectedMonth] = useState(null); // 0‑based index or null
   const [selectedYear, setSelectedYear] = useState(null);
 
+  // ✅ Current Week / Full Archive toggle — "current week" is a live date
+  // filter (same trick as the Dashboard's weekly reset), so it naturally
+  // shows empty on a fresh Monday with zero risk of ever losing data.
+  const [viewMode, setViewMode] = useState('current'); // 'current' | 'archive'
+
+  function startOfCurrentWeek() {
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(now.getDate() - ((now.getDay() + 6) % 7)); // Monday
+    start.setHours(0, 0, 0, 0);
+    return start;
+  }
+
   const fetchOrders = async () => {
     setLoading(true);
     setError(null);
@@ -176,7 +189,7 @@ export default function Orders() {
     }
   };
 
-  // Apply all filters: search, status, month/year
+  // Apply all filters: search, status, month/year, and current-week (when active)
   const filteredOrders = orders.filter(order => {
     const matchesSearch =
       (order.order_id || order._id).toLowerCase().includes(search.toLowerCase()) ||
@@ -191,8 +204,35 @@ export default function Orders() {
         orderDate.getFullYear() === selectedYear;
     }
 
-    return matchesSearch && matchesStatus && matchesMonth;
+    const matchesWeek = viewMode === 'archive' || new Date(order.createdAt) >= startOfCurrentWeek();
+
+    return matchesSearch && matchesStatus && matchesMonth && matchesWeek;
   });
+
+  // ✅ In Archive mode, organize results by Year → Month → Week (most recent
+  // first) by inserting header rows into an otherwise flat, sorted list —
+  // this keeps every existing row's View/Edit/status logic completely
+  // untouched, just adds section headers above each group.
+  const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const archiveRows = (() => {
+    if (viewMode !== 'archive') return filteredOrders.map(o => ({ type: 'order', order: o }));
+    const sorted = [...filteredOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const rows = [];
+    let lastKey = '';
+    sorted.forEach(order => {
+      const d = new Date(order.createdAt);
+      const year = d.getFullYear();
+      const month = MONTH_NAMES[d.getMonth()];
+      const weekOfMonth = Math.ceil(d.getDate() / 7);
+      const key = `${year}-${month}-${weekOfMonth}`;
+      if (key !== lastKey) {
+        rows.push({ type: 'header', label: `${year} — ${month} — Week ${weekOfMonth}` });
+        lastKey = key;
+      }
+      rows.push({ type: 'order', order });
+    });
+    return rows;
+  })();
 
   const getOrderId = (order) => order.order_id || order._id?.slice(-6).toUpperCase() || 'N/A';
 
@@ -221,6 +261,24 @@ export default function Orders() {
             Payment Verification
             <ArrowRight size={16} />
           </button>
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setViewMode('current')}
+            className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-colors ${viewMode === 'current' ? 'bg-[#C62828] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+          >
+            Current Week
+          </button>
+          <button
+            onClick={() => setViewMode('archive')}
+            className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-colors ${viewMode === 'archive' ? 'bg-[#C62828] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+          >
+            Full Archive
+          </button>
+          {viewMode === 'current' && (
+            <span className="self-center text-xs text-gray-400 ml-2">Resets automatically every Monday — nothing is ever deleted, see Full Archive for everything.</span>
+          )}
         </div>
 
         <div className="flex flex-col md:flex-row gap-4 mb-4">
@@ -253,7 +311,8 @@ export default function Orders() {
           </button>
         </div>
 
-        {/* Month / Year filter bar */}
+        {/* Month / Year filter bar — only relevant in Full Archive mode */}
+        {viewMode === 'archive' && (
         <div className="flex flex-wrap items-center gap-3 mb-6 p-3 bg-white rounded-xl border">
           <Calendar size={18} className="text-gray-500" />
           <span className="text-sm font-medium text-gray-700">Filter by month:</span>
@@ -312,6 +371,7 @@ export default function Orders() {
             </button>
           )}
         </div>
+        )} {/* end viewMode === 'archive' */}
 
         {loading ? (
           <div className="text-center py-12 bg-white rounded-2xl border">
@@ -338,10 +398,25 @@ export default function Orders() {
                 </tr>
               </thead>
               <tbody>
-                {filteredOrders.length === 0 ? (
-                  <tr><td colSpan="6" className="text-center py-8 text-gray-500">No orders found.</td></tr>
+                {archiveRows.length === 0 ? (
+                  <tr><td colSpan="6" className="text-center py-8 text-gray-500">
+                    {viewMode === 'current' ? 'No orders this week yet.' : 'No archived orders found.'}
+                  </td></tr>
                 ) : (
-                  filteredOrders.map(order => (
+                  archiveRows.map((row, idx) => {
+                    if (row.type === 'header') {
+                      return (
+                        <tr key={`header-${idx}`}>
+                          <td colSpan="6" className="px-4 pt-6 pb-2">
+                            <span className="inline-block bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full">
+                              📁 {row.label}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    }
+                    const order = row.order;
+                    return (
                     <tr key={order._id} className={`border-b hover:bg-gray-50 ${order.isDeleted ? 'bg-red-50/30' : ''}`}>
                       <td className="py-4 px-4 font-medium text-[#C62828]">
                         {getOrderId(order)}
@@ -365,7 +440,8 @@ export default function Orders() {
                         )}
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>

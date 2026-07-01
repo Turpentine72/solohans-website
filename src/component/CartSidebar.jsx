@@ -12,6 +12,68 @@ import cardimg from '../assets/images.png';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
+// Searchable delivery zone picker — keeps its own local filter state so
+// the main CartSidebar component stays clean.
+function ZoneSearch({ zones, selectedZoneId, onSelect }) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+
+  const filtered = query.trim()
+    ? zones.filter(z => z.name.toLowerCase().includes(query.trim().toLowerCase()))
+    : zones;
+
+  const selected = zones.find(z => z._id === selectedZoneId);
+
+  const pick = (z) => {
+    onSelect(z._id);
+    setQuery('');
+    setOpen(false);
+  };
+
+  const clear = () => {
+    onSelect('');
+    setQuery('');
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        value={selected && !open ? `${selected.name} — ₦${selected.fee.toLocaleString()}` : query}
+        onChange={e => { setQuery(e.target.value); setOpen(true); onSelect(''); }}
+        onFocus={() => setOpen(true)}
+        placeholder="Search your area…"
+        className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:border-[#C62828] text-sm"
+      />
+      {selected && !open && (
+        <button onClick={clear} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">✕</button>
+      )}
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-white border rounded-xl shadow-lg max-h-52 overflow-y-auto">
+          <div
+            className="px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 cursor-pointer"
+            onMouseDown={e => { e.preventDefault(); clear(); }}
+          >
+            My area isn't listed
+          </div>
+          {filtered.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-gray-400">No matching areas found</div>
+          ) : filtered.map(z => (
+            <div
+              key={z._id}
+              onMouseDown={e => { e.preventDefault(); pick(z); }}
+              className={`px-3 py-2 text-sm cursor-pointer hover:bg-[#FFF8F0] ${z._id === selectedZoneId ? 'bg-[#FFF8F0] font-medium text-[#C62828]' : ''}`}
+            >
+              {z.name} <span className="text-gray-400">— ₦{z.fee.toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CartSidebar() {
   const {
     cartItems, isOpen, checkoutMode, closeCart, removeFromCart,
@@ -464,16 +526,7 @@ export default function CartSidebar() {
                   {zones.length > 0 && (
                     <div>
                       <label className="block text-sm font-medium text-[#444] mb-1">Delivery Area</label>
-                      <select
-                        value={selectedZoneId}
-                        onChange={(e) => setSelectedZoneId(e.target.value)}
-                        className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:border-[#C62828]"
-                      >
-                        <option value="">My area isn't listed</option>
-                        {zones.map(z => (
-                          <option key={z._id} value={z._id}>{z.name} — ₦{z.fee.toLocaleString()}</option>
-                        ))}
-                      </select>
+                      <ZoneSearch zones={zones} selectedZoneId={selectedZoneId} onSelect={setSelectedZoneId} />
                     </div>
                   )}
                 </>
