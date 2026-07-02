@@ -91,7 +91,7 @@ export default function Sidebar({ isOpen, toggle }) {
             />
             <div>
               <h1 className="text-lg font-bold text-white">
-                Solohans
+                SOLOHANS
               </h1>
               <p className="text-xs text-gray-400">
                 Admin Dashboard
