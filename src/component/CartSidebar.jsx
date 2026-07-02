@@ -479,7 +479,7 @@ export default function CartSidebar() {
                   )}
                   {taxEnabled && taxAmount > 0 && (
                     <div className="flex justify-between text-sm text-gray-600">
-                      <span>Tax ({taxRate}%)</span>
+                      <span>VAT ({taxRate}%)</span>
                       <span>₦{taxAmount.toLocaleString()}</span>
                     </div>
                   )}
