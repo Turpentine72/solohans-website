@@ -32,6 +32,7 @@ import defaultLogo from '../../assets/5e82d2b1-ebb5-4e77-8fa1-91fae5baab69.png';
 const navItems = [
   { label: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/admin' },
   { label: 'Orders', icon: <ShoppingBag size={20} />, path: '/admin/orders' },
+  { label: 'POS / New Sale', icon: <CreditCard size={20} />, path: '/admin/pos', roles: ['admin', 'storekeeper', 'cashier'] },
   { label: 'Payment Verification', icon: <CreditCard size={20} />, path: '/admin/payments' },
   { label: 'Menu Management', icon: <UtensilsCrossed size={20} />, path: '/admin/menu' },
   { label: 'Categories', icon: <FolderTree size={20} />, path: '/admin/categories' },
@@ -91,7 +92,7 @@ export default function Sidebar({ isOpen, toggle }) {
             />
             <div>
               <h1 className="text-lg font-bold text-white">
-                SOLOHANS
+                Solohans
               </h1>
               <p className="text-xs text-gray-400">
                 Admin Dashboard

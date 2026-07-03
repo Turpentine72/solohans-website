@@ -74,8 +74,31 @@ export const roles = {
 };
 
 export const stock = {
-  getToday: () => request('/stock/today'),
-  setOpening: (items) => request('/stock/opening', { method: 'POST', body: JSON.stringify({ items }) }),
+  // Legacy alias kept for any old callers
+  getToday: () => request('/inventory'),
+  setOpening: () => Promise.resolve(),
+};
+
+export const inventory = {
+  get: () => request('/inventory'),
+  restock: (item, quantity, reason) => request('/inventory/restock', { method: 'POST', body: JSON.stringify({ item, quantity, reason }) }),
+  updateExtraPrice: (key, body) => request(`/inventory/extras/${key}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  addExtra: (body) => request('/inventory/extras', { method: 'POST', body: JSON.stringify(body) }),
+  setThreshold: (lowStockThreshold) => request('/inventory/threshold', { method: 'PATCH', body: JSON.stringify({ lowStockThreshold }) }),
+  history: (limit = 100) => request(`/inventory/history?limit=${limit}`),
+};
+
+export const pos = {
+  quote: (cart) => request('/pos/quote', { method: 'POST', body: JSON.stringify({ cart }) }),
+  checkout: (body) => request('/pos/checkout', { method: 'POST', body: JSON.stringify(body) }),
+};
+
+export const dashboard = {
+  summary: (period = 'daily') => request(`/dashboard/summary?period=${period}`),
+};
+
+export const websiteCheckout = {
+  create: (body) => request('/orders/checkout', { method: 'POST', body: JSON.stringify(body) }),
 };
 
 export const reconciliation = {

@@ -16,6 +16,7 @@ import Terms from "./pages/Terms";
 import PaymentPolicy from "./pages/PaymentPolicy";
 import TrackOrder from "./pages/TrackOrder";
 import CompletePayment from "./pages/CompletePayment";
+import OrderMeals from "./pages/OrderMeals";
 
 // Admin imports
 import AdminLayout from "./admin/layouts/AdminLayout";
@@ -36,6 +37,7 @@ import GalleryManagement from "./admin/pages/GalleryManagement";
 import DeliveryZones from "./admin/pages/DeliveryZones";
 import StaffManagement from "./admin/pages/StaffManagement";
 import StockManagement from "./admin/pages/StockManagement";
+import POS from "./admin/pages/POS";
 import Reconciliation from "./admin/pages/Reconciliation";
 import AuditLog from "./admin/pages/AuditLog";
 import Profile from "./admin/pages/Profile";
@@ -67,6 +69,7 @@ function App() {
                   <Route path="/track-order" element={<TrackOrder />} />
                   <Route path="/track/:orderId" element={<TrackOrder />} />
                   <Route path="/complete-payment" element={<CompletePayment />} />
+                  <Route path="/order-meal" element={<OrderMeals />} />
 
                   {/* Public routes with navbar & footer */}
                   <Route
@@ -98,6 +101,7 @@ function App() {
                           <Routes>
                             <Route index element={<Dashboard />} />
                             <Route path="orders" element={<Orders />} />
+                            <Route path="pos" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier']}><POS /></ProtectedRoute>} />
                             <Route path="payments" element={<PaymentVerification />} />
                             <Route path="payout" element={<AdminPayout />} />   {/* 🆕 Payout route */}
                             <Route path="menu" element={<MenuManagement />} />

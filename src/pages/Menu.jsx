@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { ShoppingCart, Send } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { usePromos } from "../context/PromoContext";
@@ -169,6 +169,14 @@ const Menu = () => {
       {/* Category Filter */}
       <section className="bg-[#FFF8F0] pt-12 pb-8 md:pt-16 md:pb-12">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
+          <div className="flex justify-center mb-6">
+            <Link
+              to="/order-meal"
+              className="inline-flex items-center gap-2 bg-[#C62828] text-white px-6 py-3 rounded-full font-semibold uppercase tracking-wide text-sm hover:bg-[#B71C1C] transition-colors"
+            >
+              🍚 Build Your Meal (Jollof / Fried Rice / Spaghetti)
+            </Link>
+          </div>
           <div className="flex flex-wrap justify-center gap-3">
             <button
               onClick={() => setActiveCategory("all")}

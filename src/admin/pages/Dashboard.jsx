@@ -20,7 +20,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { orders as ordersApi, expenses as expensesApi } from '../../lib/api';
+import { orders as ordersApi, expenses as expensesApi, dashboard as dashboardApi } from '../../lib/api';
 
 // Monday-start of the CURRENT week — this is what makes the dashboard
 // naturally "reset" every Monday: it's a live query filtered to this date
@@ -47,12 +47,27 @@ export default function Dashboard() {
   ]);
   const [weeklyData, setWeeklyData] = useState([]);
   const [weekOrderCount, setWeekOrderCount] = useState(0);
+  const [summary, setSummary] = useState(null);
+  const [summaryPeriod, setSummaryPeriod] = useState('daily');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    fetchSummary(summaryPeriod);
+  }, [summaryPeriod]);
+
+  const fetchSummary = async (period) => {
+    try {
+      const data = await dashboardApi.summary(period);
+      setSummary(data);
+    } catch (err) {
+      console.error('Dashboard summary fetch error:', err);
+    }
+  };
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -165,7 +180,97 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Weekly Revenue Chart */}
+        {/* ─── Unified Payment + Inventory Summary (Website + Store) ─── */}
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xl font-bold text-gray-800">Payment &amp; Inventory Summary</h2>
+          <div className="flex gap-2">
+            {['daily', 'weekly', 'monthly'].map((p) => (
+              <button
+                key={p}
+                onClick={() => setSummaryPeriod(p)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold capitalize ${summaryPeriod === p ? 'bg-[#C62828] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {summary && (
+          <>
+            {(summary.alerts.outOfStock.length > 0 || summary.alerts.lowStock.length > 0) && (
+              <div className="mb-6 space-y-2">
+                {summary.alerts.outOfStock.map((label) => (
+                  <div key={label} className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2 text-sm font-medium">
+                    <AlertTriangle size={16} /> Out of stock: {label}
+                  </div>
+                ))}
+                {summary.alerts.lowStock.map((a) => (
+                  <div key={a.label} className="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-4 py-2 text-sm font-medium">
+                    <AlertTriangle size={16} /> Low stock: {a.label} ({a.remaining} remaining)
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Total Revenue</p>
+                <p className="text-xl font-bold text-gray-800">₦{summary.sales.totalRevenue.toLocaleString()}</p>
+                <p className="text-xs text-gray-400 mt-1">Website ₦{summary.sales.websiteRevenue.toLocaleString()} · Store ₦{summary.sales.storeRevenue.toLocaleString()}</p>
+              </div>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">🟢 Cash Total</p>
+                <p className="text-xl font-bold text-gray-800">₦{summary.payments.cashTotal.toLocaleString()}</p>
+              </div>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">🔵 Transfer Total</p>
+                <p className="text-xl font-bold text-gray-800">₦{summary.payments.transferTotal.toLocaleString()}</p>
+              </div>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">🟣 POS Total</p>
+                <p className="text-xl font-bold text-gray-800">₦{summary.payments.posTotal.toLocaleString()}</p>
+              </div>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">🌐 Website Payment Total</p>
+                <p className="text-xl font-bold text-gray-800">₦{summary.payments.websitePaymentTotal.toLocaleString()}</p>
+              </div>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Meals Sold</p>
+                <p className="text-xl font-bold text-gray-800">{summary.sales.mealsSold}</p>
+              </div>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Best Selling Meal</p>
+                <p className="text-lg font-bold text-gray-800">{summary.analytics.bestSellingMeal || '—'}</p>
+              </div>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Best Selling Protein</p>
+                <p className="text-lg font-bold text-gray-800">{summary.analytics.bestSellingProtein || '—'}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Remaining Jollof (scoops)</p>
+                <p className="text-xl font-bold text-gray-800">{summary.inventory.jollof.remaining}</p>
+              </div>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Remaining Fried Rice (scoops)</p>
+                <p className="text-xl font-bold text-gray-800">{summary.inventory.friedRice.remaining}</p>
+              </div>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Remaining Spaghetti Plastics</p>
+                <p className="text-xl font-bold text-gray-800">{summary.inventory.spaghettiPlastics.remaining}</p>
+              </div>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Remaining Lunch Boxes</p>
+                <p className="text-xl font-bold text-gray-800">{summary.inventory.lunchBoxes.remaining}</p>
+              </div>
+            </div>
+          </>
+        )}
+
+
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 max-w-3xl">
           <h2 className="text-xl font-bold text-gray-800 mb-1">Current Week Sales (Mon–Sun)</h2>
           <p className="text-xs text-gray-500 mb-4">{weekOrderCount} order(s) so far this week</p>
