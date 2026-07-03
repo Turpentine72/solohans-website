@@ -16,7 +16,6 @@ import Terms from "./pages/Terms";
 import PaymentPolicy from "./pages/PaymentPolicy";
 import TrackOrder from "./pages/TrackOrder";
 import CompletePayment from "./pages/CompletePayment";
-import OrderMeals from "./pages/OrderMeals";
 
 // Admin imports
 import AdminLayout from "./admin/layouts/AdminLayout";
@@ -37,8 +36,11 @@ import GalleryManagement from "./admin/pages/GalleryManagement";
 import DeliveryZones from "./admin/pages/DeliveryZones";
 import StaffManagement from "./admin/pages/StaffManagement";
 import StockManagement from "./admin/pages/StockManagement";
-import POS from "./admin/pages/POS";
 import Reconciliation from "./admin/pages/Reconciliation";
+import MealInventory from "./admin/pages/MealInventory";
+import PaymentReconciliation from "./admin/pages/PaymentReconciliation";
+import POS from "./admin/pages/POS";
+import OrderMeals from "./pages/OrderMeals";
 import AuditLog from "./admin/pages/AuditLog";
 import Profile from "./admin/pages/Profile";
 import StaffHistory from "./admin/pages/StaffHistory";
@@ -101,7 +103,6 @@ function App() {
                           <Routes>
                             <Route index element={<Dashboard />} />
                             <Route path="orders" element={<Orders />} />
-                            <Route path="pos" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier']}><POS /></ProtectedRoute>} />
                             <Route path="payments" element={<PaymentVerification />} />
                             <Route path="payout" element={<AdminPayout />} />   {/* 🆕 Payout route */}
                             <Route path="menu" element={<MenuManagement />} />
@@ -115,6 +116,9 @@ function App() {
                             <Route path="delivery-zones" element={<DeliveryZones />} />
                             <Route path="stock" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper']}><StockManagement /></ProtectedRoute>} />
                             <Route path="reconciliation" element={<ProtectedRoute allowedRoles={['admin', 'closing_staff']}><Reconciliation /></ProtectedRoute>} />
+                            <Route path="meal-inventory" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier']}><MealInventory /></ProtectedRoute>} />
+                            <Route path="payment-reconciliation" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier', 'closing_staff']}><PaymentReconciliation /></ProtectedRoute>} />
+                            <Route path="pos" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier']}><POS /></ProtectedRoute>} />
                             <Route path="staff" element={<ProtectedRoute allowedRoles={['admin']}><StaffManagement /></ProtectedRoute>} />
                             <Route path="audit-log" element={<ProtectedRoute allowedRoles={['admin']}><AuditLog /></ProtectedRoute>} />
                             <Route path="profile" element={<Profile />} />

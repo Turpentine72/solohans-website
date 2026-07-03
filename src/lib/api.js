@@ -74,11 +74,12 @@ export const roles = {
 };
 
 export const stock = {
-  // Legacy alias kept for any old callers
-  getToday: () => request('/inventory'),
-  setOpening: () => Promise.resolve(),
+  getToday: () => request('/stock/today'),
+  setOpening: (items) => request('/stock/opening', { method: 'POST', body: JSON.stringify({ items }) }),
 };
 
+// ─── NEW: shared meal-combo inventory (rice scoops / spaghetti plastics /
+// lunch boxes / extras) — separate from the per-menu-item `stock` above ───
 export const inventory = {
   get: () => request('/inventory'),
   restock: (item, quantity, reason) => request('/inventory/restock', { method: 'POST', body: JSON.stringify({ item, quantity, reason }) }),
@@ -99,6 +100,14 @@ export const dashboard = {
 
 export const websiteCheckout = {
   create: (body) => request('/orders/checkout', { method: 'POST', body: JSON.stringify(body) }),
+};
+
+// ─── NEW: payment-method reconciliation (Cash/Transfer/POS/Website) —
+// separate from the original per-menu-item `reconciliation` below ─────────
+export const paymentReconciliation = {
+  getExpected: () => request('/payment-reconciliation/expected'),
+  closeDay: (actualCounts) => request('/payment-reconciliation/close-day', { method: 'POST', body: JSON.stringify({ actualCounts }) }),
+  getHistory: () => request('/payment-reconciliation/history'),
 };
 
 export const reconciliation = {

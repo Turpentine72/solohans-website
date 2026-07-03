@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Plus, Trash2, ShoppingBag, CheckCircle2 } from 'lucide-react';
 import {
   MEAL_TYPES, MEAL_LABELS, PROTEIN_PRICES, PROTEIN_LABELS,
   isComboAllowed, priceCart,
 } from '../lib/pricing';
-import { websiteCheckout, payments as paymentsApi } from '../lib/api';
+import { websiteCheckout, payments as paymentsApi, deliveryZones as deliveryZonesApi } from '../lib/api';
 import { initializePaystack } from '../lib/paystack';
 
 const EXTRAS_CATALOG = {
@@ -28,16 +28,26 @@ export default function OrderMeals() {
   const [customerEmail, setCustomerEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [deliveryMethod, setDeliveryMethod] = useState('delivery'); // 'delivery' | 'pickup'
+  const [deliveryZones, setDeliveryZones] = useState([]);
+  const [deliveryZoneId, setDeliveryZoneId] = useState('');
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState('');
   const [placedOrder, setPlacedOrder] = useState(null);
   const [paid, setPaid] = useState(false);
   const [paying, setPaying] = useState(false);
 
+  useEffect(() => {
+    deliveryZonesApi.getActive().then(setDeliveryZones).catch(() => setDeliveryZones([]));
+  }, []);
+
+  const selectedZoneFee = deliveryZones.find((z) => z._id === deliveryZoneId)?.fee || 0;
+  const deliveryFeeForDisplay = deliveryMethod === 'pickup' ? 0 : selectedZoneFee;
+
   const priced = useMemo(() => {
     const extrasArr = Object.entries(extras).filter(([, qty]) => qty > 0).map(([item, qty]) => ({ item, qty }));
-    return priceCart({ mealPackages, extras: extrasArr, extrasCatalog: EXTRAS_CATALOG });
-  }, [mealPackages, extras]);
+    return priceCart({ mealPackages, extras: extrasArr, extrasCatalog: EXTRAS_CATALOG, deliveryFee: deliveryFeeForDisplay });
+  }, [mealPackages, extras, deliveryFeeForDisplay]);
 
   const toggleMeal = (idx, meal) => {
     setMealPackages((prev) => prev.map((mp, i) => {
@@ -69,12 +79,17 @@ export default function OrderMeals() {
     setError('');
     if (!allValid) return setError('Each meal must have 1–2 items from an allowed combo (e.g. Jollof + Spaghetti).');
     if (!customerEmail || !customerEmail.includes('@')) return setError('A valid email is required.');
+    if (deliveryMethod === 'delivery' && !address.trim()) return setError('Please enter a delivery address, or switch to Pickup.');
 
     setPlacing(true);
     try {
       const extrasArr = Object.entries(extras).filter(([, qty]) => qty > 0).map(([item, qty]) => ({ item, qty }));
-      const cart = { mealPackages, extras: extrasArr, deliveryFee: 0 };
-      const res = await websiteCheckout.create({ cart, customerName, customerEmail, phone, address });
+      const cart = { mealPackages, extras: extrasArr };
+      const res = await websiteCheckout.create({
+        cart, customerName, customerEmail, phone, address,
+        deliveryMethod,
+        deliveryZoneId: deliveryMethod === 'delivery' ? (deliveryZoneId || null) : null,
+      });
       setPlacedOrder(res.order);
     } catch (err) {
       setError(err.message);
@@ -201,7 +216,26 @@ export default function OrderMeals() {
               <input type="text" placeholder="Full name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full border rounded-xl px-3 py-2 text-sm" />
               <input type="email" required placeholder="Email (for order tracking)" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} className="w-full border rounded-xl px-3 py-2 text-sm" />
               <input type="tel" placeholder="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border rounded-xl px-3 py-2 text-sm" />
-              <textarea placeholder="Delivery address (leave blank for pickup)" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full border rounded-xl px-3 py-2 text-sm" rows="2" />
+
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setDeliveryMethod('delivery')} className={`flex-1 py-2 rounded-xl text-sm font-semibold border ${deliveryMethod === 'delivery' ? 'bg-[#C62828] text-white border-[#C62828]' : 'border-gray-200 text-gray-700'}`}>Delivery</button>
+                <button type="button" onClick={() => setDeliveryMethod('pickup')} className={`flex-1 py-2 rounded-xl text-sm font-semibold border ${deliveryMethod === 'pickup' ? 'bg-[#C62828] text-white border-[#C62828]' : 'border-gray-200 text-gray-700'}`}>Pickup</button>
+              </div>
+
+              {deliveryMethod === 'delivery' && (
+                <>
+                  <select value={deliveryZoneId} onChange={(e) => setDeliveryZoneId(e.target.value)} className="w-full border rounded-xl px-3 py-2 text-sm">
+                    <option value="">Select your area…</option>
+                    {deliveryZones.map((z) => (
+                      <option key={z._id} value={z._id}>{z.name} — ₦{z.fee.toLocaleString()}</option>
+                    ))}
+                  </select>
+                  {!deliveryZoneId && (
+                    <p className="text-xs text-amber-600">Don't see your area? You can still place the order — our team will confirm your delivery fee before payment.</p>
+                  )}
+                  <textarea required placeholder="Delivery address" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full border rounded-xl px-3 py-2 text-sm" rows="2" />
+                </>
+              )}
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm p-5">
@@ -218,9 +252,19 @@ export default function OrderMeals() {
                     <span>₦{e.total.toLocaleString()}</span>
                   </div>
                 ))}
+                <div className="flex justify-between text-gray-600">
+                  <span>Delivery Fee</span>
+                  {deliveryMethod === 'pickup' ? (
+                    <span>₦0 (Pickup)</span>
+                  ) : deliveryZoneId ? (
+                    <span>₦{selectedZoneFee.toLocaleString()}</span>
+                  ) : (
+                    <span className="text-amber-600">To be confirmed</span>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between font-bold text-lg border-t pt-3">
-                <span>Total</span>
+                <span>Total{deliveryMethod === 'delivery' && !deliveryZoneId ? ' (excl. delivery)' : ''}</span>
                 <span className="text-[#C62828]">₦{priced.totalAmount.toLocaleString()}</span>
               </div>
             </div>
@@ -234,14 +278,24 @@ export default function OrderMeals() {
         ) : (
           <div className="bg-white rounded-2xl shadow-md p-6">
             <h2 className="font-bold text-[#222222] mb-4">Order #{placedOrder.order_id}</h2>
-            <div className="flex justify-between text-lg font-bold border-t pt-4 mb-4">
-              <span>Total Due</span>
-              <span className="text-[#C62828]">₦{Number(placedOrder.totalAmount).toLocaleString()}</span>
-            </div>
-            {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
-            <button onClick={handlePay} disabled={paying} className="w-full py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C] disabled:opacity-70">
-              {paying ? 'Processing…' : `Pay ₦${Number(placedOrder.totalAmount).toLocaleString()} with Paystack`}
-            </button>
+            {placedOrder.delivery_fee_set ? (
+              <>
+                <div className="flex justify-between text-lg font-bold border-t pt-4 mb-4">
+                  <span>Total Due</span>
+                  <span className="text-[#C62828]">₦{Number(placedOrder.totalAmount).toLocaleString()}</span>
+                </div>
+                {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+                <button onClick={handlePay} disabled={paying} className="w-full py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C] disabled:opacity-70">
+                  {paying ? 'Processing…' : `Pay ₦${Number(placedOrder.totalAmount).toLocaleString()} with Paystack`}
+                </button>
+              </>
+            ) : (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+                Your order (₦{Number(placedOrder.items_subtotal).toLocaleString()} for items) has been received.
+                Since your area wasn't in our delivery list, our team will confirm your exact delivery fee shortly —
+                you'll get a payment link once it's set. You can also call us to pay directly.
+              </div>
+            )}
           </div>
         )}
       </div>
