@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Package, PlusCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { ingredients as ingredientsApi } from '../../lib/api';
@@ -11,6 +11,7 @@ function IngredientCard({ ing }) {
         {ing.outOfStock && <span className="flex items-center gap-1 text-red-600 text-xs font-semibold"><AlertTriangle size={14} /> OUT OF STOCK</span>}
         {!ing.outOfStock && ing.lowStock && <span className="flex items-center gap-1 text-amber-600 text-xs font-semibold"><AlertTriangle size={14} /> LOW STOCK</span>}
       </div>
+      <p className="text-xs text-gray-400 mb-3">Tracked in {ing.pieceLabel} pieces — {ing.piecesPerPack} per pack</p>
       <div className="grid grid-cols-2 gap-y-2 text-sm">
         <div><p className="text-gray-400">Initial Packs Added</p><p className="font-bold text-gray-800">{ing.initialPacksAdded}</p></div>
         <div><p className="text-gray-400">Initial Pieces</p><p className="font-bold text-gray-800">{ing.initialPieces}</p></div>
@@ -29,14 +30,21 @@ export default function Ingredients() {
   const [restockKey, setRestockKey] = useState('shawarmaBread');
   const [packs, setPacks] = useState('');
   const [saving, setSaving] = useState(false);
+  const pollRef = useRef(null);
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     try { setReport(await ingredientsApi.getReport()); } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+    finally { if (!silent) setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // Real-time sync: poll quietly every 8s so this page reflects sales made
+    // from the POS or website without anyone needing to hit Refresh.
+    pollRef.current = setInterval(() => load(true), 8000);
+    return () => clearInterval(pollRef.current);
+  }, []);
 
   const handleRestock = async (e) => {
     e.preventDefault();

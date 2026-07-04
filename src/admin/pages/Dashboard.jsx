@@ -266,6 +266,13 @@ export default function Dashboard() {
                 <p className="text-xs text-gray-500 mb-1">Remaining Lunch Boxes</p>
                 <p className="text-xl font-bold text-gray-800">{summary.inventory.lunchBoxes.remaining}</p>
               </div>
+              {(summary.ingredients || []).map((ing) => (
+                <div key={ing.key} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1">Remaining {ing.pieceLabel} Pieces</p>
+                  <p className={`text-xl font-bold ${ing.outOfStock ? 'text-red-600' : ing.lowStock ? 'text-amber-600' : 'text-gray-800'}`}>{ing.remainingPieces}</p>
+                  <p className="text-xs text-gray-400 mt-1">{ing.remainingPacks} packs remaining</p>
+                </div>
+              ))}
             </div>
           </>
         )}
