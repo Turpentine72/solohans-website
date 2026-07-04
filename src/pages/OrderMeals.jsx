@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Plus, Trash2, ShoppingBag, CheckCircle2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, Trash2, ShoppingBag, CheckCircle2, FileText, Receipt, Home } from 'lucide-react';
+import { useSettings } from '../context/SettingsContext';
 import {
   MEAL_TYPES, MEAL_LABELS, PROTEIN_PRICES, PROTEIN_LABELS,
   isComboAllowed, priceCart,
@@ -22,12 +24,16 @@ function emptyMealPackage() {
 }
 
 export default function OrderMeals() {
+  const { settings } = useSettings();
+  const taxEnabled = !!settings?.tax?.enabled;
+  const taxRate = settings?.tax?.rate || 0;
   const [mealPackages, setMealPackages] = useState([emptyMealPackage()]);
   const [extras, setExtras] = useState({});
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [notes, setNotes] = useState('');
   const [deliveryMethod, setDeliveryMethod] = useState('delivery'); // 'delivery' | 'pickup'
   const [deliveryZones, setDeliveryZones] = useState([]);
   const [deliveryZoneId, setDeliveryZoneId] = useState('');
@@ -48,6 +54,10 @@ export default function OrderMeals() {
     const extrasArr = Object.entries(extras).filter(([, qty]) => qty > 0).map(([item, qty]) => ({ item, qty }));
     return priceCart({ mealPackages, extras: extrasArr, extrasCatalog: EXTRAS_CATALOG, deliveryFee: deliveryFeeForDisplay });
   }, [mealPackages, extras, deliveryFeeForDisplay]);
+
+  const itemsSubtotal = priced.mealsTotal + priced.extrasTotal;
+  const taxAmount = taxEnabled ? Math.round(itemsSubtotal * (taxRate / 100)) : 0;
+  const grandTotal = itemsSubtotal + taxAmount + (deliveryMethod === 'pickup' ? 0 : (deliveryZoneId ? selectedZoneFee : 0));
 
   const toggleMeal = (idx, meal) => {
     setMealPackages((prev) => prev.map((mp, i) => {
@@ -86,7 +96,7 @@ export default function OrderMeals() {
       const extrasArr = Object.entries(extras).filter(([, qty]) => qty > 0).map(([item, qty]) => ({ item, qty }));
       const cart = { mealPackages, extras: extrasArr };
       const res = await websiteCheckout.create({
-        cart, customerName, customerEmail, phone, address,
+        cart, customerName, customerEmail, phone, address, notes,
         deliveryMethod,
         deliveryZoneId: deliveryMethod === 'delivery' ? (deliveryZoneId || null) : null,
       });
@@ -124,9 +134,29 @@ export default function OrderMeals() {
     return (
       <div className="min-h-screen bg-[#FFF8F0] py-16 px-4">
         <div className="max-w-lg mx-auto bg-white rounded-2xl shadow-md p-8 text-center">
-          <CheckCircle2 size={48} className="text-green-600 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-[#222222] mb-2">Order Confirmed!</h2>
-          <p className="text-gray-500 mb-4">Order #{placedOrder.order_id} — 🌐 WEBSITE PAYMENT. We'll start preparing it right away.</p>
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 size={32} className="text-green-600" />
+          </div>
+          <h2 className="text-xl font-bold text-[#222222] mb-2">Payment Successful</h2>
+          <p className="text-gray-500 mb-6">
+            Order <strong>#{placedOrder.order_id}</strong> is confirmed and being prepared.
+            A confirmation has been sent to {placedOrder.customerEmail}.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link
+              to={`/track/${placedOrder.order_id}`}
+              className="flex-1 inline-flex items-center justify-center gap-2 py-3 border-2 border-[#C62828] text-[#C62828] rounded-full font-semibold hover:bg-[#FFF8F0]"
+            >
+              <Receipt size={18} /> Track Order
+            </Link>
+            <Link
+              to="/order-meal"
+              onClick={() => window.location.reload()}
+              className="flex-1 inline-flex items-center justify-center gap-2 py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C]"
+            >
+              <ShoppingBag size={18} /> Continue Shopping
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -236,6 +266,19 @@ export default function OrderMeals() {
                   <textarea required placeholder="Delivery address" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full border rounded-xl px-3 py-2 text-sm" rows="2" />
                 </>
               )}
+
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 mb-1">
+                  <FileText size={14} /> Additional Notes (optional)
+                </label>
+                <textarea
+                  placeholder="e.g. No onions, extra spicy, call on arrival"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full border rounded-xl px-3 py-2 text-sm"
+                  rows="2"
+                />
+              </div>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm p-5">
@@ -262,10 +305,16 @@ export default function OrderMeals() {
                     <span className="text-amber-600">To be confirmed</span>
                   )}
                 </div>
+                {taxEnabled && (
+                  <div className="flex justify-between text-gray-600">
+                    <span className="flex items-center gap-1"><Receipt size={14} /> VAT ({taxRate}%)</span>
+                    <span>₦{taxAmount.toLocaleString()}</span>
+                  </div>
+                )}
               </div>
               <div className="flex justify-between font-bold text-lg border-t pt-3">
                 <span>Total{deliveryMethod === 'delivery' && !deliveryZoneId ? ' (excl. delivery)' : ''}</span>
-                <span className="text-[#C62828]">₦{priced.totalAmount.toLocaleString()}</span>
+                <span className="text-[#C62828]">₦{grandTotal.toLocaleString()}</span>
               </div>
             </div>
 

@@ -38,6 +38,7 @@ import StaffManagement from "./admin/pages/StaffManagement";
 import StockManagement from "./admin/pages/StockManagement";
 import Reconciliation from "./admin/pages/Reconciliation";
 import MealInventory from "./admin/pages/MealInventory";
+import Ingredients from "./admin/pages/Ingredients";
 import PaymentReconciliation from "./admin/pages/PaymentReconciliation";
 import POS from "./admin/pages/POS";
 import OrderMeals from "./pages/OrderMeals";
@@ -117,6 +118,7 @@ function App() {
                             <Route path="stock" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper']}><StockManagement /></ProtectedRoute>} />
                             <Route path="reconciliation" element={<ProtectedRoute allowedRoles={['admin', 'closing_staff']}><Reconciliation /></ProtectedRoute>} />
                             <Route path="meal-inventory" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier']}><MealInventory /></ProtectedRoute>} />
+                            <Route path="ingredients" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier']}><Ingredients /></ProtectedRoute>} />
                             <Route path="payment-reconciliation" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier', 'closing_staff']}><PaymentReconciliation /></ProtectedRoute>} />
                             <Route path="pos" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier']}><POS /></ProtectedRoute>} />
                             <Route path="staff" element={<ProtectedRoute allowedRoles={['admin']}><StaffManagement /></ProtectedRoute>} />

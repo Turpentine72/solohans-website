@@ -2,24 +2,37 @@ import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import {
   Search, Eye, X, CreditCard, AlertTriangle, History,
-  Trash2, RefreshCw, Calendar, ArrowRight
+  Trash2, RefreshCw, Calendar, ArrowRight,
+  Banknote, ArrowLeftRight, Globe, Store, UtensilsCrossed, Truck, Home, Receipt, FileText,
 } from 'lucide-react';
 import { orders as ordersApi, payments as paymentsApi } from '../../lib/api';
 import { PAYMENT_TAGS } from '../../lib/pricing';
 import { useNavigate } from 'react-router-dom';
 
+const PAYMENT_TAG_ICONS = { Banknote, ArrowLeftRight, CreditCard, Globe };
+
 function PaymentTagBadge({ order }) {
   const tag = PAYMENT_TAGS[order.paymentMethod] || PAYMENT_TAGS['WEBSITE PAYMENT'];
+  const Icon = PAYMENT_TAG_ICONS[tag.icon] || CreditCard;
   return (
-    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${tag.color}`}>
-      {tag.emoji} {tag.label}
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${tag.color}`}>
+      <Icon size={12} /> {tag.label}
     </span>
   );
 }
 
-const orderTypeIcons = {
-  card: <CreditCard size={16} className="text-blue-600" />,
-};
+// Store sales (POS) show Shop Sale / Restaurant Sale — never Delivery/Pickup.
+// Website orders keep showing Delivery / Pickup, as before.
+function OrderTypeLabel({ order }) {
+  if (order.source === 'store') {
+    return order.pos_sale_type === 'restaurant'
+      ? <span className="inline-flex items-center gap-1"><UtensilsCrossed size={14} /> Restaurant Sale</span>
+      : <span className="inline-flex items-center gap-1"><Store size={14} /> Shop Sale</span>;
+  }
+  return order.delivery_method === 'pickup'
+    ? <span className="inline-flex items-center gap-1"><Home size={14} /> Pickup</span>
+    : <span className="inline-flex items-center gap-1"><Truck size={14} /> Delivery</span>;
+}
 
 const statusColor = (status) => {
   switch (status) {
@@ -359,7 +372,7 @@ export default function Orders() {
                         {order.isDeleted && <span className="ml-2 text-xs text-red-500">(deleted)</span>}
                       </td>
                       <td className="py-4 px-4">{order.customerName || 'Guest'}</td>
-                      <td className="py-4 px-4 flex items-center gap-1">{orderTypeIcons[order.order_type] || 'Card'} Card</td>
+                      <td className="py-4 px-4"><OrderTypeLabel order={order} /></td>
                       <td className="py-4 px-4"><PaymentTagBadge order={order} /></td>
                       <td className="py-4 px-4"><span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColor(order.status)}`}>{order.status}</span></td>
                       <td className="py-4 px-4 text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</td>
@@ -398,18 +411,22 @@ export default function Orders() {
                   <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium">{selectedOrder.phone || 'N/A'}</p></div>
                   <div><p className="text-xs text-gray-500">Email</p><p className="font-medium">{selectedOrder.customerEmail || 'N/A'}</p></div>
                   <div><p className="text-xs text-gray-500">Address</p><p className="font-medium">{selectedOrder.address || 'N/A'}</p></div>
-                  <div><p className="text-xs text-gray-500">Order Channel</p><p className="font-medium">{selectedOrder.order_channel === 'whatsapp' ? '💬 WhatsApp' : '💳 Online'}</p></div>
-                  <div><p className="text-xs text-gray-500">Order Type</p><p className="font-medium">{selectedOrder.delivery_method === 'pickup' ? '🏪 Pickup' : '🚚 Delivery'}</p></div>
-                  <div><p className="text-xs text-gray-500">Food Total</p><p className="font-medium">₦{selectedOrder.totalAmount?.toLocaleString()}</p></div>
+                  <div><p className="text-xs text-gray-500">Order Channel</p><p className="font-medium flex items-center gap-1">{selectedOrder.order_channel === 'whatsapp' ? <><CreditCard size={14} /> WhatsApp</> : <><Globe size={14} /> Online</>}</p></div>
+                  <div><p className="text-xs text-gray-500">Order Type</p><p className="font-medium"><OrderTypeLabel order={selectedOrder} /></p></div>
+                  <div><p className="text-xs text-gray-500">Food Total</p><p className="font-medium">₦{selectedOrder.items_subtotal?.toLocaleString() ?? selectedOrder.totalAmount?.toLocaleString()}</p></div>
+                  {selectedOrder.tax_enabled && (
+                    <div><p className="text-xs text-gray-500 flex items-center gap-1"><Receipt size={12} /> VAT ({selectedOrder.tax_rate}%)</p><p className="font-medium">₦{selectedOrder.tax_amount?.toLocaleString()}</p></div>
+                  )}
+                  <div><p className="text-xs text-gray-500">Grand Total</p><p className="font-medium">₦{selectedOrder.totalAmount?.toLocaleString()}</p></div>
                 </div>
 
-                {selectedOrder.delivery_method === 'pickup' ? (
+                {selectedOrder.source === 'store' ? null : selectedOrder.delivery_method === 'pickup' ? (
                   <div className="border rounded-lg p-4 bg-gray-50">
-                    <p className="text-sm font-medium text-gray-600">🏪 Pickup order – no delivery fee applies.</p>
+                    <p className="text-sm font-medium text-gray-600 flex items-center gap-2"><Home size={16} /> Pickup order – no delivery fee applies.</p>
                   </div>
                 ) : selectedOrder.freeDelivery ? (
                   <div className="border rounded-lg p-4 bg-green-50">
-                    <p className="text-sm font-medium text-green-700">🚚 Free delivery was applied – no delivery fee to set.</p>
+                    <p className="text-sm font-medium text-green-700 flex items-center gap-2"><Truck size={16} /> Free delivery was applied – no delivery fee to set.</p>
                   </div>
                 ) : (
                   <div className="border rounded-lg p-4">
@@ -423,7 +440,7 @@ export default function Orders() {
 
                 {selectedOrder.notes && (
                   <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl text-sm">
-                    <p className="text-xs text-amber-700 font-semibold mb-1">📝 Customer Note</p>
+                    <p className="text-xs text-amber-700 font-semibold mb-1 flex items-center gap-1"><FileText size={12} /> Customer Note</p>
                     <p className="text-amber-900">{selectedOrder.notes}</p>
                   </div>
                 )}

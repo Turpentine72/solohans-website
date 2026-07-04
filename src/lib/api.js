@@ -110,6 +110,12 @@ export const paymentReconciliation = {
   getHistory: () => request('/payment-reconciliation/history'),
 };
 
+// ─── NEW: Shawarma Bread / Hotdog dual-level pack+piece inventory ────────
+export const ingredients = {
+  getReport: () => request('/ingredients/report'),
+  restock: (key, packs) => request('/ingredients/restock', { method: 'POST', body: JSON.stringify({ key, packs }) }),
+};
+
 export const reconciliation = {
   getExpected: () => request('/reconciliation/expected'),
   closeDay: (actualCounts) => request('/reconciliation/close-day', { method: 'POST', body: JSON.stringify({ actualCounts }) }),

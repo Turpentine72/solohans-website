@@ -1,11 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Plus, Trash2, CheckCircle } from 'lucide-react';
-import { pos as posApi } from '../../lib/api';
+import { Plus, Trash2, CheckCircle, Store, UtensilsCrossed, Minus, Package, Banknote, ArrowLeftRight, CreditCard, Globe } from 'lucide-react';
+import { pos as posApi, menuItems as menuItemsApi } from '../../lib/api';
 import {
   MEAL_TYPES, MEAL_LABELS, PROTEIN_PRICES, PROTEIN_LABELS,
-  RICE_TYPES, isComboAllowed, priceCart,
+  RICE_TYPES, isComboAllowed, priceCart, PAYMENT_TAGS,
 } from '../../lib/pricing';
+
+const PAYMENT_TAG_ICONS = { Banknote, ArrowLeftRight, CreditCard, Globe };
 
 const EXTRAS_CATALOG_FALLBACK = {
   hotdog: { label: 'Hotdog', price: 1000 },
@@ -22,12 +24,40 @@ function emptyMealPackage() {
 
 export default function POS() {
   const [mealPackages, setMealPackages] = useState([emptyMealPackage()]);
-  const [extras, setExtras] = useState({}); // { hotdog: qty }
+  const [extras, setExtras] = useState({}); // { hotdog: qty } — flat-priced standalone extras
+  const [menuCatalog, setMenuCatalog] = useState([]); // Shawarma, Hotdog (as a menu item), or anything else from MenuItem
+  const [menuCatalogLoading, setMenuCatalogLoading] = useState(true);
+  const [selectedMenuItems, setSelectedMenuItems] = useState({}); // { menuItemId: qty }
   const [paymentMethod, setPaymentMethod] = useState('');
+  const [posSaleType, setPosSaleType] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [placing, setPlacing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    menuItemsApi.getAll({ available: true })
+      .then((data) => setMenuCatalog(Array.isArray(data) ? data : data.items || []))
+      .catch(() => setMenuCatalog([]))
+      .finally(() => setMenuCatalogLoading(false));
+  }, []);
+
+  const setMenuItemQty = (id, qty) => {
+    const q = Math.max(0, Number(qty) || 0);
+    setSelectedMenuItems((prev) => {
+      const next = { ...prev };
+      if (q === 0) delete next[id];
+      else next[id] = q;
+      return next;
+    });
+  };
+
+  const menuItemsTotal = useMemo(() => {
+    return Object.entries(selectedMenuItems).reduce((sum, [id, qty]) => {
+      const item = menuCatalog.find((m) => m._id === id);
+      return sum + (item ? item.price * qty : 0);
+    }, 0);
+  }, [selectedMenuItems, menuCatalog]);
 
   const priced = useMemo(() => {
     const extrasArr = Object.entries(extras).filter(([, qty]) => qty > 0).map(([item, qty]) => ({ item, qty }));
@@ -62,22 +92,34 @@ export default function POS() {
 
   const setExtraQty = (key, qty) => setExtras((prev) => ({ ...prev, [key]: Math.max(0, Number(qty) || 0) }));
 
-  const allValid = mealPackages.every((mp) => isComboAllowed(mp.meals)) && mealPackages.length > 0;
+  // A meal-package "slot" only counts if the staff actually picked meals in
+  // it — the default empty slot doesn't force a rice/spaghetti meal onto
+  // every sale (e.g. a Shawarma-only sale has zero meal packages).
+  const usedMealPackages = mealPackages.filter((mp) => mp.meals.length > 0);
+  const hasAnyExtras = Object.values(extras).some((qty) => qty > 0);
+  const hasAnyMenuItems = Object.keys(selectedMenuItems).length > 0;
+  const allValid =
+    usedMealPackages.every((mp) => isComboAllowed(mp.meals)) &&
+    (usedMealPackages.length > 0 || hasAnyExtras || hasAnyMenuItems);
 
   const handleCompleteSale = async () => {
     setError('');
-    if (!allValid) return setError('Each meal package must have 1–2 meals from an allowed combo.');
+    if (!allValid) return setError('Add at least one meal, menu item, or extra — and make sure any meal combo is 1–2 allowed items.');
+    if (!posSaleType) return setError('Select an Order Type (Shop Sale or Restaurant Sale) before completing the sale.');
     if (!paymentMethod) return setError('Select a payment method (Cash, Transfer or POS) before completing the sale.');
 
     setPlacing(true);
     try {
       const extrasArr = Object.entries(extras).filter(([, qty]) => qty > 0).map(([item, qty]) => ({ item, qty }));
-      const cart = { mealPackages, extras: extrasArr, deliveryFee: 0 };
-      const res = await posApi.checkout({ cart, paymentMethod, customerName });
+      const menuItemsArr = Object.entries(selectedMenuItems).map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
+      const cart = { mealPackages: usedMealPackages, extras: extrasArr, menuItems: menuItemsArr, deliveryFee: 0 };
+      const res = await posApi.checkout({ cart, paymentMethod, customerName, posSaleType });
       setResult(res);
       setMealPackages([emptyMealPackage()]);
       setExtras({});
+      setSelectedMenuItems({});
       setPaymentMethod('');
+      setPosSaleType('');
       setCustomerName('');
     } catch (err) {
       setError(err.message);
@@ -153,6 +195,32 @@ export default function POS() {
           ))}
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2"><Package size={18} /> Menu Items (Shawarma, Hotdog, etc.)</h3>
+            {menuCatalogLoading ? (
+              <p className="text-sm text-gray-400">Loading menu…</p>
+            ) : menuCatalog.length === 0 ? (
+              <p className="text-sm text-gray-400">No menu items available yet — add some in Menu Management.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {menuCatalog.map((item) => {
+                  const qty = selectedMenuItems[item._id] || 0;
+                  return (
+                    <div key={item._id} className={`border rounded-lg p-3 ${qty > 0 ? 'border-[#C62828] bg-[#FFF8F0]' : 'border-gray-200'}`}>
+                      <p className="text-sm font-semibold text-gray-800">{item.name}</p>
+                      <p className="text-xs text-gray-500 mb-2">₦{item.price.toLocaleString()} each</p>
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => setMenuItemQty(item._id, qty - 1)} className="w-7 h-7 flex items-center justify-center border rounded-full text-gray-500 hover:bg-gray-50"><Minus size={14} /></button>
+                        <span className="w-8 text-center font-semibold">{qty}</span>
+                        <button type="button" onClick={() => setMenuItemQty(item._id, qty + 1)} className="w-7 h-7 flex items-center justify-center border rounded-full text-gray-500 hover:bg-gray-50"><Plus size={14} /></button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
             <h3 className="font-bold text-gray-800 mb-3">Extras</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {Object.entries(EXTRAS_CATALOG_FALLBACK).map(([key, c]) => (
@@ -189,21 +257,51 @@ export default function POS() {
                 <span>₦{e.total.toLocaleString()}</span>
               </div>
             ))}
+            {Object.entries(selectedMenuItems).map(([id, qty]) => {
+              const item = menuCatalog.find((m) => m._id === id);
+              if (!item) return null;
+              return (
+                <div key={id} className="flex justify-between text-gray-600">
+                  <span>{item.name} × {qty}</span>
+                  <span>₦{(item.price * qty).toLocaleString()}</span>
+                </div>
+              );
+            })}
           </div>
 
           <div className="flex justify-between font-bold text-lg border-t pt-3 mb-4">
             <span>Total</span>
-            <span className="text-[#C62828]">₦{priced.totalAmount.toLocaleString()}</span>
+            <span className="text-[#C62828]">₦{(priced.totalAmount + menuItemsTotal).toLocaleString()}</span>
+          </div>
+
+          <p className="text-xs text-gray-500 mb-2 font-semibold">Order Type (Required)</p>
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <button
+              type="button" onClick={() => setPosSaleType('shop')}
+              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold border ${posSaleType === 'shop' ? 'bg-[#C62828] text-white border-[#C62828]' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+            >
+              <Store size={16} /> Shop Sale
+            </button>
+            <button
+              type="button" onClick={() => setPosSaleType('restaurant')}
+              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold border ${posSaleType === 'restaurant' ? 'bg-[#C62828] text-white border-[#C62828]' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+            >
+              <UtensilsCrossed size={16} /> Restaurant Sale
+            </button>
           </div>
 
           <p className="text-xs text-gray-500 mb-2 font-semibold">Payment Method (Required)</p>
           <div className="space-y-2 mb-4">
-            {['CASH', 'TRANSFER', 'POS'].map((m) => (
-              <label key={m} className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer text-sm">
-                <input type="radio" name="paymentMethod" checked={paymentMethod === m} onChange={() => setPaymentMethod(m)} />
-                {m === 'CASH' && '🟢'} {m === 'TRANSFER' && '🔵'} {m === 'POS' && '🟣'} {m}
-              </label>
-            ))}
+            {['CASH', 'TRANSFER', 'POS'].map((m) => {
+              const tag = PAYMENT_TAGS[m];
+              const TagIcon = PAYMENT_TAG_ICONS[tag.icon] || CreditCard;
+              return (
+                <label key={m} className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer text-sm">
+                  <input type="radio" name="paymentMethod" checked={paymentMethod === m} onChange={() => setPaymentMethod(m)} />
+                  <TagIcon size={14} /> {m}
+                </label>
+              );
+            })}
           </div>
 
           {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
@@ -216,14 +314,18 @@ export default function POS() {
             {placing ? 'Saving…' : 'Complete Sale'}
           </button>
 
-          {result && (
-            <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-4 text-sm">
-              <p className="flex items-center gap-2 font-semibold text-green-700 mb-1"><CheckCircle size={16}/> Sale completed</p>
-              <p>Order #{result.order.order_id}</p>
-              <p>Tag: {result.paymentTag}</p>
-              <p>Amount: ₦{result.order.totalAmount.toLocaleString()}</p>
-            </div>
-          )}
+          {result && (() => {
+            const tag = PAYMENT_TAGS[result.order.paymentMethod] || PAYMENT_TAGS['WEBSITE PAYMENT'];
+            const TagIcon = PAYMENT_TAG_ICONS[tag.icon] || CreditCard;
+            return (
+              <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-4 text-sm">
+                <p className="flex items-center gap-2 font-semibold text-green-700 mb-1"><CheckCircle size={16}/> Sale completed</p>
+                <p>Order #{result.order.order_id}</p>
+                <p className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${tag.color}`}><TagIcon size={12} /> {tag.label}</p>
+                <p>Amount: ₦{result.order.totalAmount.toLocaleString()}</p>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </>

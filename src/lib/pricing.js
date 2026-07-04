@@ -116,9 +116,11 @@ export function priceCart({ mealPackages = [], extras = [], extrasCatalog = {}, 
   };
 }
 
+// Icon keys map to lucide-react components at render time — see
+// PaymentTagBadge in Orders.jsx / POS.jsx. No emojis anywhere in the app.
 export const PAYMENT_TAGS = {
-  CASH: { label: 'CASH', emoji: '🟢', color: 'bg-green-100 text-green-700' },
-  TRANSFER: { label: 'TRANSFER', emoji: '🔵', color: 'bg-blue-100 text-blue-700' },
-  POS: { label: 'POS', emoji: '🟣', color: 'bg-purple-100 text-purple-700' },
-  'WEBSITE PAYMENT': { label: 'WEBSITE PAYMENT', emoji: '🌐', color: 'bg-teal-100 text-teal-700' },
+  CASH: { label: 'CASH', icon: 'Banknote', color: 'bg-green-100 text-green-700' },
+  TRANSFER: { label: 'TRANSFER', icon: 'ArrowLeftRight', color: 'bg-blue-100 text-blue-700' },
+  POS: { label: 'POS', icon: 'CreditCard', color: 'bg-purple-100 text-purple-700' },
+  'WEBSITE PAYMENT': { label: 'WEBSITE PAYMENT', icon: 'Globe', color: 'bg-teal-100 text-teal-700' },
 };

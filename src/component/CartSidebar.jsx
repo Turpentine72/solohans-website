@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   X, Minus, Plus, Trash2, ShoppingCart, CreditCard, ShieldCheck, MessageCircle, Copy, Check,
+  Gift, Truck, Receipt, Store, MapPin, Info,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { usePromos } from '../context/PromoContext';
@@ -11,68 +12,6 @@ import { useSettings } from '../context/SettingsContext';
 import cardimg from '../assets/images.png';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-
-// Searchable delivery zone picker — keeps its own local filter state so
-// the main CartSidebar component stays clean.
-function ZoneSearch({ zones, selectedZoneId, onSelect }) {
-  const [query, setQuery] = useState('');
-  const [open, setOpen] = useState(false);
-
-  const filtered = query.trim()
-    ? zones.filter(z => z.name.toLowerCase().includes(query.trim().toLowerCase()))
-    : zones;
-
-  const selected = zones.find(z => z._id === selectedZoneId);
-
-  const pick = (z) => {
-    onSelect(z._id);
-    setQuery('');
-    setOpen(false);
-  };
-
-  const clear = () => {
-    onSelect('');
-    setQuery('');
-    setOpen(false);
-  };
-
-  return (
-    <div className="relative">
-      <input
-        type="text"
-        value={selected && !open ? `${selected.name} — ₦${selected.fee.toLocaleString()}` : query}
-        onChange={e => { setQuery(e.target.value); setOpen(true); onSelect(''); }}
-        onFocus={() => setOpen(true)}
-        placeholder="Search your area…"
-        className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:border-[#C62828] text-sm"
-      />
-      {selected && !open && (
-        <button onClick={clear} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">✕</button>
-      )}
-      {open && (
-        <div className="absolute z-50 mt-1 w-full bg-white border rounded-xl shadow-lg max-h-52 overflow-y-auto">
-          <div
-            className="px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 cursor-pointer"
-            onMouseDown={e => { e.preventDefault(); clear(); }}
-          >
-            My area isn't listed
-          </div>
-          {filtered.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-gray-400">No matching areas found</div>
-          ) : filtered.map(z => (
-            <div
-              key={z._id}
-              onMouseDown={e => { e.preventDefault(); pick(z); }}
-              className={`px-3 py-2 text-sm cursor-pointer hover:bg-[#FFF8F0] ${z._id === selectedZoneId ? 'bg-[#FFF8F0] font-medium text-[#C62828]' : ''}`}
-            >
-              {z.name} <span className="text-gray-400">— ₦{z.fee.toLocaleString()}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function CartSidebar() {
   const {
@@ -285,6 +224,9 @@ export default function CartSidebar() {
                   items: cartItems,
                   total: amountToPay,
                   deliveryFee: newOrder.delivery_fee || 0,
+                  taxEnabled: !!newOrder.tax_enabled,
+                  taxRate: newOrder.tax_rate || 0,
+                  taxAmount: newOrder.tax_amount || 0,
                   freeItems,
                   deliveryMethod: newOrder.delivery_method,
                 });
@@ -344,7 +286,7 @@ export default function CartSidebar() {
       const grandTotal = payNowAmount; // items (with tax) + delivery fee, if known yet
 
       const lines = [
-        `🛒 *ORDER SUMMARY*`,
+        `*ORDER SUMMARY*`,
         ``,
         `Order ID: ${newOrder.order_id}`,
         ``,
@@ -446,7 +388,7 @@ export default function CartSidebar() {
 
                 {freeItems.length > 0 && (
                   <div className="mt-4 border-t pt-4">
-                    <h4 className="text-sm font-semibold text-green-700 mb-2">🎁 Free Items</h4>
+                    <h4 className="text-sm font-semibold text-green-700 mb-2 flex items-center gap-1"><Gift size={14} /> Free Items</h4>
                     <div className="space-y-2">
                       {freeItems.map(free => (
                         <div key={free.id} className="flex items-center gap-3 bg-green-50 p-2 rounded-lg">
@@ -473,13 +415,13 @@ export default function CartSidebar() {
                     </div>
                   )}
                   {freeDelivery && (
-                    <div className="bg-green-50 text-green-700 p-2 rounded-lg text-xs font-medium">
-                      🚚 Free Delivery Applied!
+                    <div className="bg-green-50 text-green-700 p-2 rounded-lg text-xs font-medium flex items-center gap-1">
+                      <Truck size={14} /> Free Delivery Applied!
                     </div>
                   )}
                   {taxEnabled && taxAmount > 0 && (
                     <div className="flex justify-between text-sm text-gray-600">
-                      <span>VAT ({taxRate}%)</span>
+                      <span>Tax ({taxRate}%)</span>
                       <span>₦{taxAmount.toLocaleString()}</span>
                     </div>
                   )}
@@ -501,16 +443,16 @@ export default function CartSidebar() {
                   <button
                     type="button"
                     onClick={() => setDeliveryMethod('delivery')}
-                    className={`py-3 rounded-xl border-2 font-semibold text-sm transition ${deliveryMethod === 'delivery' ? 'border-[#C62828] bg-[#FFF8F0] text-[#C62828]' : 'border-gray-200 text-gray-500'}`}
+                    className={`py-3 rounded-xl border-2 font-semibold text-sm transition flex items-center justify-center gap-1.5 ${deliveryMethod === 'delivery' ? 'border-[#C62828] bg-[#FFF8F0] text-[#C62828]' : 'border-gray-200 text-gray-500'}`}
                   >
-                    🚚 Delivery
+                    <Truck size={16} /> Delivery
                   </button>
                   <button
                     type="button"
                     onClick={() => setDeliveryMethod('pickup')}
-                    className={`py-3 rounded-xl border-2 font-semibold text-sm transition ${deliveryMethod === 'pickup' ? 'border-[#C62828] bg-[#FFF8F0] text-[#C62828]' : 'border-gray-200 text-gray-500'}`}
+                    className={`py-3 rounded-xl border-2 font-semibold text-sm transition flex items-center justify-center gap-1.5 ${deliveryMethod === 'pickup' ? 'border-[#C62828] bg-[#FFF8F0] text-[#C62828]' : 'border-gray-200 text-gray-500'}`}
                   >
-                    🏪 Pickup
+                    <Store size={16} /> Pickup
                   </button>
                 </div>
               </div>
@@ -526,7 +468,16 @@ export default function CartSidebar() {
                   {zones.length > 0 && (
                     <div>
                       <label className="block text-sm font-medium text-[#444] mb-1">Delivery Area</label>
-                      <ZoneSearch zones={zones} selectedZoneId={selectedZoneId} onSelect={setSelectedZoneId} />
+                      <select
+                        value={selectedZoneId}
+                        onChange={(e) => setSelectedZoneId(e.target.value)}
+                        className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:border-[#C62828]"
+                      >
+                        <option value="">My area isn't listed</option>
+                        {zones.map(z => (
+                          <option key={z._id} value={z._id}>{z.name} — ₦{z.fee.toLocaleString()}</option>
+                        ))}
+                      </select>
                     </div>
                   )}
                 </>
@@ -538,8 +489,9 @@ export default function CartSidebar() {
                   <span>We'll send your order details straight to WhatsApp so our team can confirm everything with you directly, including your final delivery fee if it's not already set above.</span>
                 </div>
               ) : deliveryMethod === 'delivery' && !selectedZone ? (
-                <div className="bg-blue-50 text-blue-700 p-3 rounded-lg text-xs">
-                  📍 {zones.length > 0 ? "Don't see your area above? " : ''}After you submit, our team will review your location and set a delivery fee. You'll get an email with a secure payment link to pay the final amount (items + delivery fee) online.
+                <div className="bg-blue-50 text-blue-700 p-3 rounded-lg text-xs flex items-start gap-2">
+                  <MapPin size={18} className="mt-0.5 flex-shrink-0" />
+                  <span>{zones.length > 0 ? "Don't see your area above? " : ''}After you submit, our team will review your location and set a delivery fee. You'll get an email with a secure payment link to pay the final amount (items + delivery fee) online.</span>
                 </div>
               ) : (
                 <div className="bg-gray-50 p-4 rounded-xl">
@@ -613,8 +565,9 @@ export default function CartSidebar() {
                     Your order has been saved and WhatsApp should have opened in a new tab with your order
                     details ready to send. If it didn't open, just message us your Order ID directly.
                   </p>
-                  <div className="bg-green-50 text-green-700 p-4 rounded-xl text-sm text-left mb-6">
-                    💬 Our team will confirm your order and payment details with you directly on WhatsApp.
+                  <div className="bg-green-50 text-green-700 p-4 rounded-xl text-sm text-left mb-6 flex items-start gap-2">
+                    <MessageCircle size={16} className="mt-0.5 flex-shrink-0" />
+                    <span>Our team will confirm your order and payment details with you directly on WhatsApp.</span>
                   </div>
                 </>
               ) : (
@@ -624,9 +577,10 @@ export default function CartSidebar() {
                     You'll receive an email at <strong>{orderResult.email}</strong> with a secure link to pay the
                     final amount (items + delivery fee) online.
                   </p>
-                  <div className="bg-blue-50 text-blue-700 p-4 rounded-xl text-sm text-left mb-6">
-                    💡 No payment has been taken yet. Your order will only be confirmed once you complete payment
-                    through the link in that email.
+                  <div className="bg-blue-50 text-blue-700 p-4 rounded-xl text-sm text-left mb-6 flex items-start gap-2">
+                    <Info size={16} className="mt-0.5 flex-shrink-0" />
+                    <span>No payment has been taken yet. Your order will only be confirmed once you complete payment
+                    through the link in that email.</span>
                   </div>
                 </>
               )}
@@ -656,7 +610,7 @@ export default function CartSidebar() {
                   </div>
                 ))}
                 {orderResult.freeItems?.map(free => (
-                  <div key={free.id} className="flex justify-between text-sm text-green-700"><span>🎁 {free.name}</span><span>FREE</span></div>
+                  <div key={free.id} className="flex justify-between text-sm text-green-700"><span className="flex items-center gap-1"><Gift size={12} /> {free.name}</span><span>FREE</span></div>
                 ))}
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-sm text-green-600">
@@ -665,6 +619,12 @@ export default function CartSidebar() {
                   </div>
                 )}
                 <hr />
+                {orderResult.taxEnabled && orderResult.taxAmount > 0 && (
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span className="flex items-center gap-1"><Receipt size={14} /> VAT ({orderResult.taxRate}%)</span>
+                    <span>₦{orderResult.taxAmount.toLocaleString()}</span>
+                  </div>
+                )}
                 {orderResult.deliveryMethod === 'pickup' ? (
                   <div className="flex justify-between font-medium"><span>Pickup</span><span className="text-green-600">No delivery fee</span></div>
                 ) : (
@@ -674,7 +634,7 @@ export default function CartSidebar() {
               </div>
 
               {orderResult.deliveryMethod === 'delivery' && (
-                <p className="text-xs text-gray-500 mb-4">🚚 Delivering to: {form.address}</p>
+                <p className="text-xs text-gray-500 mb-4 flex items-center justify-center gap-1"><Truck size={12} /> Delivering to: {form.address}</p>
               )}
 
               <Link to={`/track/${orderResult.orderId}`} onClick={handlePlaceOrder} className="w-full inline-block py-3 mb-3 border-2 border-[#C62828] text-[#C62828] rounded-full font-semibold hover:bg-[#FFF8F0]">Track This Order</Link>

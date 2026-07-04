@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link, useParams } from 'react-router-dom';
-import { Search, Clock, Copy, Check } from 'lucide-react';
+import { Search, Clock, Copy, Check, Receipt, Truck, Home, Store, UtensilsCrossed } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import heroImage from '../assets/photo-1540189549336-e6e99c3679fe.avif';
 
@@ -228,15 +228,35 @@ export default function TrackOrder() {
                 </div>
                 <div>
                   <p className="text-gray-500">Food Total</p>
-                  <p className="font-medium">₦{order.totalAmount?.toLocaleString()}</p>
+                  <p className="font-medium">₦{(order.items_subtotal ?? order.totalAmount)?.toLocaleString()}</p>
                 </div>
+                {order.tax_enabled && order.tax_amount > 0 && (
+                  <div>
+                    <p className="text-gray-500 flex items-center gap-1"><Receipt size={12} /> VAT ({order.tax_rate}%)</p>
+                    <p className="font-medium">₦{order.tax_amount.toLocaleString()}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-gray-500">Delivery Fee</p>
                   <p className="font-medium">₦{order.delivery_fee?.toLocaleString() || '0'}</p>
                 </div>
                 <div>
+                  <p className="text-gray-500">Grand Total</p>
+                  <p className="font-medium">₦{order.totalAmount?.toLocaleString()}</p>
+                </div>
+                <div>
                   <p className="text-gray-500">Order Type</p>
-                  <p className="font-medium">{order.order_type}</p>
+                  <p className="font-medium flex items-center gap-1">
+                    {order.source === 'store' ? (
+                      order.pos_sale_type === 'restaurant'
+                        ? <><UtensilsCrossed size={14} /> Restaurant Sale</>
+                        : <><Store size={14} /> Shop Sale</>
+                    ) : order.delivery_method === 'pickup' ? (
+                      <><Home size={14} /> Pickup</>
+                    ) : (
+                      <><Truck size={14} /> Delivery</>
+                    )}
+                  </p>
                 </div>
               </div>
 
