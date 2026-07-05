@@ -435,6 +435,15 @@ export default function Orders() {
                 <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
               </div>
               <div className="p-5 space-y-5">
+                <div className={`flex items-center gap-3 p-4 rounded-xl border-2 ${getSalespersonName(selectedOrder) ? 'border-[#C62828] bg-red-50/40' : 'border-gray-200 bg-gray-50'}`}>
+                  <UserCircle size={28} className={getSalespersonName(selectedOrder) ? 'text-[#C62828]' : 'text-gray-400'} />
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Salesperson</p>
+                    <p className={`text-lg font-bold ${getSalespersonName(selectedOrder) ? 'text-gray-800' : 'text-gray-400 italic'}`}>
+                      {getSalespersonName(selectedOrder) || 'Unassigned Seller'}
+                    </p>
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl">
                   <div><p className="text-xs text-gray-500">Customer</p><p className="font-medium">{selectedOrder.customerName || 'Guest'}</p></div>
                   <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium">{selectedOrder.phone || 'N/A'}</p></div>
@@ -442,7 +451,6 @@ export default function Orders() {
                   <div><p className="text-xs text-gray-500">Address</p><p className="font-medium">{selectedOrder.address || 'N/A'}</p></div>
                   <div><p className="text-xs text-gray-500">Order Channel</p><p className="font-medium flex items-center gap-1">{selectedOrder.order_channel === 'whatsapp' ? <><CreditCard size={14} /> WhatsApp</> : <><Globe size={14} /> Online</>}</p></div>
                   <div><p className="text-xs text-gray-500">Order Type</p><p className="font-medium"><OrderTypeLabel order={selectedOrder} /></p></div>
-                  <div><p className="text-xs text-gray-500">Salesperson</p><p className="font-medium"><SalespersonTag order={selectedOrder} /></p></div>
                   <div><p className="text-xs text-gray-500">Food Total</p><p className="font-medium">₦{selectedOrder.items_subtotal?.toLocaleString() ?? selectedOrder.totalAmount?.toLocaleString()}</p></div>
                   {selectedOrder.tax_enabled && (
                     <div><p className="text-xs text-gray-500 flex items-center gap-1"><Receipt size={12} /> VAT ({selectedOrder.tax_rate}%)</p><p className="font-medium">₦{selectedOrder.tax_amount?.toLocaleString()}</p></div>
