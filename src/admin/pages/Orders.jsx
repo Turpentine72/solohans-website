@@ -4,7 +4,7 @@ import {
   Search, Eye, X, CreditCard, AlertTriangle, History,
   Trash2, RefreshCw, Calendar, ArrowRight,
   Banknote, ArrowLeftRight, Globe, Store, UtensilsCrossed, Truck, Home, Receipt, FileText, SplitSquareHorizontal,
-  CheckCircle, Clock, Lock,
+  CheckCircle, Clock, Lock, UserCircle,
 } from 'lucide-react';
 import { orders as ordersApi, payments as paymentsApi } from '../../lib/api';
 import { PAYMENT_TAGS } from '../../lib/pricing';
@@ -33,6 +33,21 @@ function OrderTypeLabel({ order }) {
   return order.delivery_method === 'pickup'
     ? <span className="inline-flex items-center gap-1"><Home size={14} /> Pickup</span>
     : <span className="inline-flex items-center gap-1"><Truck size={14} /> Delivery</span>;
+}
+
+// ✅ Salesperson accountability tag — permanent record of who handled the
+// sale. POS orders are auto-tagged with the cashier who rang it up
+// (staffNameSnapshot); website orders show whoever clicked "Tag Me"
+// (taggedStaffName). Neither is ever cleared once set.
+function getSalespersonName(order) {
+  return order.staffNameSnapshot || order.taggedStaffName || '';
+}
+
+function SalespersonTag({ order }) {
+  const name = getSalespersonName(order);
+  return name
+    ? <span className="inline-flex items-center gap-1 text-gray-700"><UserCircle size={14} className="text-gray-400" /> {name}</span>
+    : <span className="inline-flex items-center gap-1 text-gray-400 italic"><UserCircle size={14} /> Unassigned Seller</span>;
 }
 
 const statusColor = (status) => {
@@ -356,6 +371,7 @@ export default function Orders() {
                   <th className="py-4 px-4">Order ID</th>
                   <th className="py-4 px-4">Customer</th>
                   <th className="py-4 px-4">Type</th>
+                  <th className="py-4 px-4">Salesperson</th>
                   <th className="py-4 px-4">Payment</th>
                   <th className="py-4 px-4">Status</th>
                   <th className="py-4 px-4">Date</th>
@@ -364,7 +380,7 @@ export default function Orders() {
               </thead>
               <tbody>
                 {filteredOrders.length === 0 ? (
-                  <tr><td colSpan="7" className="text-center py-8 text-gray-500">No orders found.</td></tr>
+                  <tr><td colSpan="8" className="text-center py-8 text-gray-500">No orders found.</td></tr>
                 ) : (
                   filteredOrders.map(order => (
                     <tr key={order._id} className={`border-b hover:bg-gray-50 ${order.isDeleted ? 'bg-gray-50/60' : ''}`}>
@@ -374,6 +390,7 @@ export default function Orders() {
                       </td>
                       <td className="py-4 px-4">{order.customerName || 'Guest'}</td>
                       <td className="py-4 px-4"><OrderTypeLabel order={order} /></td>
+                      <td className="py-4 px-4"><SalespersonTag order={order} /></td>
                       <td className="py-4 px-4">
                         <PaymentTagBadge order={order} />
                         {order.paymentMethod === 'SPLIT' && order.splitPayments?.length > 0 && (
@@ -425,6 +442,7 @@ export default function Orders() {
                   <div><p className="text-xs text-gray-500">Address</p><p className="font-medium">{selectedOrder.address || 'N/A'}</p></div>
                   <div><p className="text-xs text-gray-500">Order Channel</p><p className="font-medium flex items-center gap-1">{selectedOrder.order_channel === 'whatsapp' ? <><CreditCard size={14} /> WhatsApp</> : <><Globe size={14} /> Online</>}</p></div>
                   <div><p className="text-xs text-gray-500">Order Type</p><p className="font-medium"><OrderTypeLabel order={selectedOrder} /></p></div>
+                  <div><p className="text-xs text-gray-500">Salesperson</p><p className="font-medium"><SalespersonTag order={selectedOrder} /></p></div>
                   <div><p className="text-xs text-gray-500">Food Total</p><p className="font-medium">₦{selectedOrder.items_subtotal?.toLocaleString() ?? selectedOrder.totalAmount?.toLocaleString()}</p></div>
                   {selectedOrder.tax_enabled && (
                     <div><p className="text-xs text-gray-500 flex items-center gap-1"><Receipt size={12} /> VAT ({selectedOrder.tax_rate}%)</p><p className="font-medium">₦{selectedOrder.tax_amount?.toLocaleString()}</p></div>

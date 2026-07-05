@@ -232,7 +232,7 @@ export default function POS() {
                       disabled={tagging === o._id || !isOnActiveShift}
                       className="flex items-center gap-1.5 bg-[#C62828] text-white px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-[#B71C1C] disabled:opacity-50"
                     >
-                      <Tag size={14} /> {tagging === o._id ? 'Tagging…' : 'Tag to Me'}
+                      <Tag size={14} /> {tagging === o._id ? 'Tagging…' : 'Tag Me'}
                     </button>
                   </div>
                 ))}
