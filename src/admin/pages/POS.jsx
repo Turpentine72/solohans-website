@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Plus, Trash2, CheckCircle, Store, UtensilsCrossed, Minus, Package, Banknote, ArrowLeftRight, CreditCard, Globe, Tag, RefreshCw, AlertTriangle, SplitSquareHorizontal } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Store, UtensilsCrossed, Minus, Package, Banknote, ArrowLeftRight, CreditCard, Globe, Tag, RefreshCw, AlertTriangle, SplitSquareHorizontal, Receipt } from 'lucide-react';
 import { pos as posApi, menuItems as menuItemsApi, orders as ordersApi, attendance as attendanceApi } from '../../lib/api';
+import { useSettings } from '../../context/SettingsContext';
 import {
   MEAL_TYPES, MEAL_LABELS, PROTEIN_PRICES, PROTEIN_LABELS,
   RICE_TYPES, isComboAllowed, priceCart, PAYMENT_TAGS,
@@ -23,6 +24,9 @@ function emptyMealPackage() {
 }
 
 export default function POS() {
+  const { settings } = useSettings();
+  const taxEnabled = !!settings?.tax?.enabled;
+  const taxRate = settings?.tax?.rate || 0;
   const [mealPackages, setMealPackages] = useState([emptyMealPackage()]);
   const [extras, setExtras] = useState({}); // { hotdog: qty } — flat-priced standalone extras
   const [menuCatalog, setMenuCatalog] = useState([]); // Shawarma, Hotdog (as a menu item), or anything else from MenuItem
@@ -98,7 +102,13 @@ export default function POS() {
     return priceCart({ mealPackages, extras: extrasArr, extrasCatalog: EXTRAS_CATALOG_FALLBACK });
   }, [mealPackages, extras]);
 
-  const grandTotal = priced.totalAmount + menuItemsTotal;
+  const itemsSubtotal = priced.totalAmount + menuItemsTotal;
+  // ✅ Must match backend/utils/checkout.js exactly: taxAmount = round(itemsSubtotal * rate/100).
+  // This was previously missing entirely — the cashier saw an untaxed total
+  // while the backend charged the tax-inclusive amount, which is exactly
+  // why split payments were failing by the tax amount.
+  const taxAmount = taxEnabled ? Math.round(itemsSubtotal * (taxRate / 100)) : 0;
+  const grandTotal = itemsSubtotal + taxAmount;
 
   // ─── Split Payment live math ──────────────────────────────────────
   const totalPaid = splitRows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
@@ -374,6 +384,12 @@ export default function POS() {
                 </div>
               );
             })}
+            {taxEnabled && (
+              <div className="flex justify-between text-gray-600">
+                <span className="flex items-center gap-1"><Receipt size={14} /> VAT ({taxRate}%)</span>
+                <span>₦{taxAmount.toLocaleString()}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-between font-bold text-lg border-t pt-3 mb-4">
