@@ -1,13 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Plus, Trash2, CheckCircle, Store, UtensilsCrossed, Minus, Package, Banknote, ArrowLeftRight, CreditCard, Globe, Tag, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Store, UtensilsCrossed, Minus, Package, Banknote, ArrowLeftRight, CreditCard, Globe, Tag, RefreshCw, AlertTriangle, SplitSquareHorizontal } from 'lucide-react';
 import { pos as posApi, menuItems as menuItemsApi, orders as ordersApi, attendance as attendanceApi } from '../../lib/api';
 import {
   MEAL_TYPES, MEAL_LABELS, PROTEIN_PRICES, PROTEIN_LABELS,
   RICE_TYPES, isComboAllowed, priceCart, PAYMENT_TAGS,
 } from '../../lib/pricing';
 
-const PAYMENT_TAG_ICONS = { Banknote, ArrowLeftRight, CreditCard, Globe };
+const PAYMENT_TAG_ICONS = { Banknote, ArrowLeftRight, CreditCard, Globe, SplitSquareHorizontal };
 
 const EXTRAS_CATALOG_FALLBACK = {
   hotdog: { label: 'Hotdog', price: 1000 },
@@ -29,6 +29,7 @@ export default function POS() {
   const [menuCatalogLoading, setMenuCatalogLoading] = useState(true);
   const [selectedMenuItems, setSelectedMenuItems] = useState({}); // { menuItemId: qty }
   const [paymentMethod, setPaymentMethod] = useState('');
+  const [splitRows, setSplitRows] = useState([{ method: 'CASH', amount: '' }, { method: 'TRANSFER', amount: '' }]);
   const [posSaleType, setPosSaleType] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [placing, setPlacing] = useState(false);
@@ -97,6 +98,20 @@ export default function POS() {
     return priceCart({ mealPackages, extras: extrasArr, extrasCatalog: EXTRAS_CATALOG_FALLBACK });
   }, [mealPackages, extras]);
 
+  const grandTotal = priced.totalAmount + menuItemsTotal;
+
+  // ─── Split Payment live math ──────────────────────────────────────
+  const totalPaid = splitRows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  const remainingBalance = Math.max(0, grandTotal - totalPaid);
+  const overpaidAmount = Math.max(0, totalPaid - grandTotal);
+  const splitExactMatch = Math.abs(totalPaid - grandTotal) < 0.5 && grandTotal > 0;
+
+  const addSplitRow = () => setSplitRows((prev) => [...prev, { method: 'CASH', amount: '' }]);
+  const removeSplitRow = (idx) => setSplitRows((prev) => prev.filter((_, i) => i !== idx));
+  const updateSplitRow = (idx, field, value) => {
+    setSplitRows((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
+  };
+
   const toggleMeal = (idx, meal) => {
     setMealPackages((prev) => prev.map((mp, i) => {
       if (i !== idx) return mp;
@@ -140,20 +155,31 @@ export default function POS() {
     if (!isOnActiveShift) return setError('You need to Start Work before making sales.');
     if (!allValid) return setError('Add at least one meal, menu item, or extra — and make sure any meal combo is 1–2 allowed items.');
     if (!posSaleType) return setError('Select an Order Type (Shop Sale or Restaurant Sale) before completing the sale.');
-    if (!paymentMethod) return setError('Select a payment method (Cash, Transfer or POS) before completing the sale.');
+    if (!paymentMethod) return setError('Select a payment method (Cash, Transfer, POS, or Split Payment) before completing the sale.');
+    if (paymentMethod === 'SPLIT' && !splitExactMatch) {
+      return setError(
+        totalPaid < grandTotal
+          ? `Split payment is short by ₦${remainingBalance.toLocaleString()}.`
+          : `Split payment exceeds the total by ₦${overpaidAmount.toLocaleString()}.`
+      );
+    }
 
     setPlacing(true);
     try {
       const extrasArr = Object.entries(extras).filter(([, qty]) => qty > 0).map(([item, qty]) => ({ item, qty }));
       const menuItemsArr = Object.entries(selectedMenuItems).map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
       const cart = { mealPackages: usedMealPackages, extras: extrasArr, menuItems: menuItemsArr, deliveryFee: 0 };
-      const res = await posApi.checkout({ cart, paymentMethod, customerName, posSaleType });
+      const splitPayments = paymentMethod === 'SPLIT'
+        ? splitRows.filter((r) => Number(r.amount) > 0).map((r) => ({ method: r.method, amount: Number(r.amount) }))
+        : undefined;
+      const res = await posApi.checkout({ cart, paymentMethod, splitPayments, customerName, posSaleType });
       setResult(res);
       loadShift();
       setMealPackages([emptyMealPackage()]);
       setExtras({});
       setSelectedMenuItems({});
       setPaymentMethod('');
+      setSplitRows([{ method: 'CASH', amount: '' }, { method: 'TRANSFER', amount: '' }]);
       setPosSaleType('');
       setCustomerName('');
     } catch (err) {
@@ -344,7 +370,7 @@ export default function POS() {
 
           <div className="flex justify-between font-bold text-lg border-t pt-3 mb-4">
             <span>Total</span>
-            <span className="text-[#C62828]">₦{(priced.totalAmount + menuItemsTotal).toLocaleString()}</span>
+            <span className="text-[#C62828]">₦{grandTotal.toLocaleString()}</span>
           </div>
 
           <p className="text-xs text-gray-500 mb-2 font-semibold">Order Type (Required)</p>
@@ -365,23 +391,93 @@ export default function POS() {
 
           <p className="text-xs text-gray-500 mb-2 font-semibold">Payment Method (Required)</p>
           <div className="space-y-2 mb-4">
-            {['CASH', 'TRANSFER', 'POS'].map((m) => {
+            {['CASH', 'TRANSFER', 'POS', 'SPLIT'].map((m) => {
               const tag = PAYMENT_TAGS[m];
               const TagIcon = PAYMENT_TAG_ICONS[tag.icon] || CreditCard;
               return (
                 <label key={m} className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer text-sm">
                   <input type="radio" name="paymentMethod" checked={paymentMethod === m} onChange={() => setPaymentMethod(m)} />
-                  <TagIcon size={14} /> {m}
+                  <TagIcon size={14} /> {m === 'SPLIT' ? 'Split Payment' : m}
                 </label>
               );
             })}
           </div>
 
+          {paymentMethod === 'SPLIT' && (
+            <div className="border border-orange-200 bg-orange-50/50 rounded-xl p-3 mb-4 space-y-2">
+              <p className="text-xs font-semibold text-orange-700 flex items-center gap-1.5 mb-1">
+                <SplitSquareHorizontal size={14} /> Split Payment Entries
+              </p>
+
+              {splitRows.map((row, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <select
+                    value={row.method}
+                    onChange={(e) => updateSplitRow(idx, 'method', e.target.value)}
+                    className="border rounded-lg px-2 py-1.5 text-sm bg-white"
+                  >
+                    <option value="CASH">Cash</option>
+                    <option value="TRANSFER">Transfer</option>
+                    <option value="POS">POS</option>
+                  </select>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Amount"
+                    value={row.amount}
+                    onChange={(e) => updateSplitRow(idx, 'amount', e.target.value)}
+                    className="flex-1 border rounded-lg px-2 py-1.5 text-sm bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeSplitRow(idx)}
+                    disabled={splitRows.length <= 1}
+                    className="w-8 h-8 flex items-center justify-center text-red-500 hover:bg-red-50 rounded-lg disabled:opacity-30"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={addSplitRow}
+                className="flex items-center gap-1.5 text-xs font-semibold text-[#C62828] hover:underline mt-1"
+              >
+                <Plus size={14} /> Add Payment Row
+              </button>
+
+              <div className="border-t border-orange-200 pt-2 mt-2 space-y-1 text-sm">
+                <div className="flex justify-between text-gray-600">
+                  <span>Total Paid</span>
+                  <span className="font-semibold">₦{totalPaid.toLocaleString()}</span>
+                </div>
+                {remainingBalance > 0 && (
+                  <div className="flex justify-between text-amber-600 font-semibold">
+                    <span>Remaining Balance</span>
+                    <span>₦{remainingBalance.toLocaleString()}</span>
+                  </div>
+                )}
+                {overpaidAmount > 0 && (
+                  <div className="flex justify-between text-red-600 font-semibold">
+                    <span>Overpaid</span>
+                    <span>₦{overpaidAmount.toLocaleString()}</span>
+                  </div>
+                )}
+                {splitExactMatch && (
+                  <div className="flex items-center gap-1.5 text-green-700 font-semibold">
+                    <CheckCircle size={14} /> Payment matches order total
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
 
           <button
             onClick={handleCompleteSale}
-            disabled={placing || !allValid || !isOnActiveShift}
+            disabled={placing || !allValid || !isOnActiveShift || (paymentMethod === 'SPLIT' && !splitExactMatch)}
             className="w-full bg-[#C62828] text-white py-3 rounded-full font-bold hover:bg-[#B71C1C] disabled:opacity-50"
           >
             {placing ? 'Saving…' : 'Complete Sale'}
@@ -395,7 +491,21 @@ export default function POS() {
                 <p className="flex items-center gap-2 font-semibold text-green-700 mb-1"><CheckCircle size={16}/> Sale completed</p>
                 <p>Order #{result.order.order_id}</p>
                 <p className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${tag.color}`}><TagIcon size={12} /> {tag.label}</p>
-                <p>Amount: ₦{result.order.totalAmount.toLocaleString()}</p>
+                {result.order.paymentMethod === 'SPLIT' && result.order.splitPayments?.length > 0 && (
+                  <div className="mt-2 space-y-1 border-t border-green-200 pt-2">
+                    {result.order.splitPayments.map((sp, i) => {
+                      const spTag = PAYMENT_TAGS[sp.method];
+                      const SpIcon = PAYMENT_TAG_ICONS[spTag.icon] || CreditCard;
+                      return (
+                        <div key={i} className="flex items-center justify-between text-gray-600">
+                          <span className="flex items-center gap-1.5"><SpIcon size={12} /> {spTag.label}</span>
+                          <span>₦{sp.amount.toLocaleString()}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="mt-2 font-semibold">Amount: ₦{result.order.totalAmount.toLocaleString()}</p>
               </div>
             );
           })()}

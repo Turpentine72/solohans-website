@@ -3,13 +3,14 @@ import { Helmet } from 'react-helmet-async';
 import {
   Search, Eye, X, CreditCard, AlertTriangle, History,
   Trash2, RefreshCw, Calendar, ArrowRight,
-  Banknote, ArrowLeftRight, Globe, Store, UtensilsCrossed, Truck, Home, Receipt, FileText,
+  Banknote, ArrowLeftRight, Globe, Store, UtensilsCrossed, Truck, Home, Receipt, FileText, SplitSquareHorizontal,
+  CheckCircle, Clock, Lock,
 } from 'lucide-react';
 import { orders as ordersApi, payments as paymentsApi } from '../../lib/api';
 import { PAYMENT_TAGS } from '../../lib/pricing';
 import { useNavigate } from 'react-router-dom';
 
-const PAYMENT_TAG_ICONS = { Banknote, ArrowLeftRight, CreditCard, Globe };
+const PAYMENT_TAG_ICONS = { Banknote, ArrowLeftRight, CreditCard, Globe, SplitSquareHorizontal };
 
 function PaymentTagBadge({ order }) {
   const tag = PAYMENT_TAGS[order.paymentMethod] || PAYMENT_TAGS['WEBSITE PAYMENT'];
@@ -373,7 +374,18 @@ export default function Orders() {
                       </td>
                       <td className="py-4 px-4">{order.customerName || 'Guest'}</td>
                       <td className="py-4 px-4"><OrderTypeLabel order={order} /></td>
-                      <td className="py-4 px-4"><PaymentTagBadge order={order} /></td>
+                      <td className="py-4 px-4">
+                        <PaymentTagBadge order={order} />
+                        {order.paymentMethod === 'SPLIT' && order.splitPayments?.length > 0 && (
+                          <div className="mt-1 space-y-0.5">
+                            {order.splitPayments.map((sp, i) => (
+                              <p key={i} className="text-[11px] text-gray-500 whitespace-nowrap">
+                                {PAYMENT_TAGS[sp.method]?.label || sp.method}: ₦{sp.amount.toLocaleString()}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </td>
                       <td className="py-4 px-4"><span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColor(order.status)}`}>{order.status}</span></td>
                       <td className="py-4 px-4 text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</td>
                       <td className="py-4 px-4 flex items-center gap-3 flex-wrap">
@@ -449,11 +461,27 @@ export default function Orders() {
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Payment Tag</p>
                     <PaymentTagBadge order={selectedOrder} />
+                    {selectedOrder.paymentMethod === 'SPLIT' && selectedOrder.splitPayments?.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {selectedOrder.splitPayments.map((sp, i) => {
+                          const spTag = PAYMENT_TAGS[sp.method];
+                          const SpIcon = PAYMENT_TAG_ICONS[spTag.icon] || CreditCard;
+                          return (
+                            <div key={i} className="flex items-center justify-between text-xs text-gray-600 gap-4">
+                              <span className="flex items-center gap-1"><SpIcon size={11} /> {spTag.label}</span>
+                              <span className="font-medium">₦{sp.amount.toLocaleString()}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                     <p className="text-xs text-gray-500 mt-2">Payment</p>
-                    <p className="font-medium">{selectedOrder.payment_status === 'paid' ? '✅ Paid' : '⏳ Unpaid'}</p>
+                    <p className="font-medium flex items-center gap-1">
+                      {selectedOrder.payment_status === 'paid' ? <><CheckCircle size={14} className="text-green-600" /> Paid</> : <><Clock size={14} className="text-amber-500" /> Unpaid</>}
+                    </p>
                     <p className="text-xs text-gray-500 mt-1">Verification</p>
-                    <p className={`font-medium ${selectedOrder.verification_status === 'Verified' ? 'text-green-600' : 'text-gray-500'}`}>
-                      {selectedOrder.verification_status === 'Verified' ? '🔒 Verified (locked)' : 'Not Verified'}
+                    <p className={`font-medium flex items-center gap-1 ${selectedOrder.verification_status === 'Verified' ? 'text-green-600' : 'text-gray-500'}`}>
+                      {selectedOrder.verification_status === 'Verified' ? <><Lock size={14} /> Verified (locked)</> : 'Not Verified'}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2">

@@ -122,5 +122,6 @@ export const PAYMENT_TAGS = {
   CASH: { label: 'CASH', icon: 'Banknote', color: 'bg-green-100 text-green-700' },
   TRANSFER: { label: 'TRANSFER', icon: 'ArrowLeftRight', color: 'bg-blue-100 text-blue-700' },
   POS: { label: 'POS', icon: 'CreditCard', color: 'bg-purple-100 text-purple-700' },
+  SPLIT: { label: 'SPLIT PAYMENT', icon: 'SplitSquareHorizontal', color: 'bg-orange-100 text-orange-700' },
   'WEBSITE PAYMENT': { label: 'WEBSITE PAYMENT', icon: 'Globe', color: 'bg-teal-100 text-teal-700' },
 };
