@@ -106,6 +106,14 @@ export default function POS() {
   const overpaidAmount = Math.max(0, totalPaid - grandTotal);
   const splitExactMatch = Math.abs(totalPaid - grandTotal) < 0.5 && grandTotal > 0;
 
+  // ✅ A checkout error (e.g. "short by ₦60") is a snapshot from the moment
+  // Complete Sale was clicked. If the cashier then edits the split rows,
+  // switches payment method, or changes the cart, that old message is no
+  // longer true and must not keep showing next to a now-correct total.
+  useEffect(() => {
+    setError('');
+  }, [splitRows, paymentMethod, mealPackages, extras, selectedMenuItems, posSaleType]);
+
   const addSplitRow = () => setSplitRows((prev) => [...prev, { method: 'CASH', amount: '' }]);
   const removeSplitRow = (idx) => setSplitRows((prev) => prev.filter((_, i) => i !== idx));
   const updateSplitRow = (idx, field, value) => {
