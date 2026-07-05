@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Plus, Trash2, CheckCircle, Store, UtensilsCrossed, Minus, Package, Banknote, ArrowLeftRight, CreditCard, Globe } from 'lucide-react';
-import { pos as posApi, menuItems as menuItemsApi } from '../../lib/api';
+import { Plus, Trash2, CheckCircle, Store, UtensilsCrossed, Minus, Package, Banknote, ArrowLeftRight, CreditCard, Globe, Tag, RefreshCw, AlertTriangle } from 'lucide-react';
+import { pos as posApi, menuItems as menuItemsApi, orders as ordersApi, attendance as attendanceApi } from '../../lib/api';
 import {
   MEAL_TYPES, MEAL_LABELS, PROTEIN_PRICES, PROTEIN_LABELS,
   RICE_TYPES, isComboAllowed, priceCart, PAYMENT_TAGS,
@@ -34,6 +34,39 @@ export default function POS() {
   const [placing, setPlacing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+
+  const [shift, setShift] = useState(null); // null = not on shift; object = active/completed shift record
+  const [shiftLoading, setShiftLoading] = useState(true);
+  const [websiteOrders, setWebsiteOrders] = useState([]);
+  const [websiteOrdersLoading, setWebsiteOrdersLoading] = useState(true);
+  const [tagging, setTagging] = useState(null); // order _id currently being tagged
+
+  const loadShift = () => attendanceApi.getToday().then(setShift).catch(() => setShift(null)).finally(() => setShiftLoading(false));
+  const loadWebsiteOrders = () => ordersApi.getWebsitePending().then(setWebsiteOrders).catch(() => setWebsiteOrders([])).finally(() => setWebsiteOrdersLoading(false));
+
+  useEffect(() => {
+    loadShift();
+    loadWebsiteOrders();
+    // Keep both fresh automatically — new website orders and shift sales
+    // should appear without anyone needing to refresh the page.
+    const poll = setInterval(() => { loadShift(); loadWebsiteOrders(); }, 10000);
+    return () => clearInterval(poll);
+  }, []);
+
+  const isOnActiveShift = shift?.checkIn && shift.status === 'Active';
+
+  const handleTagToMe = async (orderId) => {
+    setTagging(orderId);
+    try {
+      await ordersApi.tagToMe(orderId);
+      await loadWebsiteOrders();
+      await loadShift();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setTagging(null);
+    }
+  };
 
   useEffect(() => {
     menuItemsApi.getAll({ available: true })
@@ -104,6 +137,7 @@ export default function POS() {
 
   const handleCompleteSale = async () => {
     setError('');
+    if (!isOnActiveShift) return setError('You need to Start Work before making sales.');
     if (!allValid) return setError('Add at least one meal, menu item, or extra — and make sure any meal combo is 1–2 allowed items.');
     if (!posSaleType) return setError('Select an Order Type (Shop Sale or Restaurant Sale) before completing the sale.');
     if (!paymentMethod) return setError('Select a payment method (Cash, Transfer or POS) before completing the sale.');
@@ -115,6 +149,7 @@ export default function POS() {
       const cart = { mealPackages: usedMealPackages, extras: extrasArr, menuItems: menuItemsArr, deliveryFee: 0 };
       const res = await posApi.checkout({ cart, paymentMethod, customerName, posSaleType });
       setResult(res);
+      loadShift();
       setMealPackages([emptyMealPackage()]);
       setExtras({});
       setSelectedMenuItems({});
@@ -133,6 +168,44 @@ export default function POS() {
       <Helmet><title>POS – New Sale | Solohans Admin</title></Helmet>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+
+          {!shiftLoading && !isOnActiveShift && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 text-amber-800">
+              <AlertTriangle size={20} className="flex-shrink-0" />
+              <p className="text-sm font-medium">You need to click <strong>Start Work</strong> (top right) before you can make sales or tag website orders.</p>
+            </div>
+          )}
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-gray-800 flex items-center gap-2"><Tag size={18} /> Website Orders</h3>
+              <button onClick={loadWebsiteOrders} className="text-gray-400 hover:text-gray-600"><RefreshCw size={16} /></button>
+            </div>
+            {websiteOrdersLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : websiteOrders.length === 0 ? (
+              <p className="text-sm text-gray-400">No pending website orders right now.</p>
+            ) : (
+              <div className="space-y-2">
+                {websiteOrders.map((o) => (
+                  <div key={o._id} className="flex items-center justify-between border border-gray-100 rounded-xl p-3">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{o.customerName || 'Guest'} — #{o.order_id}</p>
+                      <p className="text-xs text-gray-500">₦{o.totalAmount?.toLocaleString()} · {o.status}</p>
+                    </div>
+                    <button
+                      onClick={() => handleTagToMe(o._id)}
+                      disabled={tagging === o._id || !isOnActiveShift}
+                      className="flex items-center gap-1.5 bg-[#C62828] text-white px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-[#B71C1C] disabled:opacity-50"
+                    >
+                      <Tag size={14} /> {tagging === o._id ? 'Tagging…' : 'Tag to Me'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold text-gray-800">New Sale (POS)</h1>
             <button onClick={addMealPackage} className="flex items-center gap-2 border border-gray-200 px-4 py-2 rounded-full text-sm font-semibold hover:bg-gray-50">
@@ -308,7 +381,7 @@ export default function POS() {
 
           <button
             onClick={handleCompleteSale}
-            disabled={placing || !allValid}
+            disabled={placing || !allValid || !isOnActiveShift}
             className="w-full bg-[#C62828] text-white py-3 rounded-full font-bold hover:bg-[#B71C1C] disabled:opacity-50"
           >
             {placing ? 'Saving…' : 'Complete Sale'}

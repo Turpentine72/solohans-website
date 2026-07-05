@@ -63,6 +63,7 @@ export const staff = {
   create: (body) => request('/staff', { method: 'POST', body: JSON.stringify(body) }),
   update: (id, body) => request(`/staff/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   changeRole: (id, role) => request(`/staff/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  setStatus: (id, status) => request(`/staff/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   resetPassword: (id, newPassword) => request(`/staff/${id}/reset-password`, { method: 'PATCH', body: JSON.stringify({ newPassword }) }),
   delete: (id) => request(`/staff/${id}`, { method: 'DELETE' }),
 };
@@ -171,6 +172,9 @@ export const orders = {
     request(`/orders/${id}/payment-status`, { method: 'PATCH', body: JSON.stringify({ payment_status }) }),
   updateDeliveryFee: (id, delivery_fee) =>
     request(`/orders/${id}/delivery-fee`, { method: 'PATCH', body: JSON.stringify({ delivery_fee }) }),
+  getWebsitePending: () => request('/orders/website-pending'),
+  tagToMe: (id) => request(`/orders/${id}/tag-to-me`, { method: 'PATCH' }),
+  reassign: (id, staffId, staffName) => request(`/orders/${id}/reassign`, { method: 'PATCH', body: JSON.stringify({ staffId, staffName }) }),
   setPaymentStatus: (id, payment_status) => request(`/orders/${id}/payment`, { method: 'PATCH', body: JSON.stringify({ payment_status }) }),
   restore: (id) => request(`/orders/${id}/restore`, { method: 'PATCH' }),
   delete: (id) => request(`/orders/${id}`, { method: 'DELETE' }),          // soft delete

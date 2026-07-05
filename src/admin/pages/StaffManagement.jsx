@@ -61,6 +61,17 @@ export default function StaffManagement() {
     }
   };
 
+  const handleStatusToggle = async (s) => {
+    const next = s.status === 'Inactive' ? 'Active' : 'Inactive';
+    if (next === 'Inactive' && !window.confirm(`Deactivate ${s.name || s.email}? They will not be able to log in until reactivated.`)) return;
+    try {
+      await staffApi.setStatus(s._id, next);
+      fetchAll();
+    } catch (err) {
+      alert(`Failed: ${err.message}`);
+    }
+  };
+
   const openEdit = (s) => {
     setEditTarget(s);
     setEditForm({ name: s.name || '', email: s.email });
@@ -155,6 +166,7 @@ export default function StaffManagement() {
                   <th className="py-3 px-4">Name</th>
                   <th className="py-3 px-4">Email</th>
                   <th className="py-3 px-4">Role</th>
+                  <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -169,6 +181,15 @@ export default function StaffManagement() {
                           <option key={r._id} value={r.name}>{r.label}</option>
                         ))}
                       </select>
+                    </td>
+                    <td className="py-3 px-4">
+                      <button
+                        onClick={() => handleStatusToggle(s)}
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${s.status === 'Inactive' ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'}`}
+                        title="Click to toggle"
+                      >
+                        {s.status === 'Inactive' ? 'Inactive' : 'Active'}
+                      </button>
                     </td>
                     <td className="py-3 px-4 text-right whitespace-nowrap">
                       <button onClick={() => openEdit(s)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg inline-block" title="Edit name/email"><Pencil size={16} /></button>
