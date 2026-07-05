@@ -273,7 +273,7 @@ export default function Orders() {
               showDeleted ? 'bg-[#C62828] text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
-            {showDeleted ? 'Showing All (incl. deleted)' : 'Show deleted'}
+            {showDeleted ? 'Showing All (incl. Archived)' : 'Show Archived'}
           </button>
         </div>
 
@@ -367,10 +367,10 @@ export default function Orders() {
                   <tr><td colSpan="7" className="text-center py-8 text-gray-500">No orders found.</td></tr>
                 ) : (
                   filteredOrders.map(order => (
-                    <tr key={order._id} className={`border-b hover:bg-gray-50 ${order.isDeleted ? 'bg-red-50/30' : ''}`}>
+                    <tr key={order._id} className={`border-b hover:bg-gray-50 ${order.isDeleted ? 'bg-gray-50/60' : ''}`}>
                       <td className="py-4 px-4 font-medium text-[#C62828]">
                         {getOrderId(order)}
-                        {order.isDeleted && <span className="ml-2 text-xs text-red-500">(deleted)</span>}
+                        {order.isDeleted && <span className="ml-2 text-xs text-gray-400">(archived)</span>}
                       </td>
                       <td className="py-4 px-4">{order.customerName || 'Guest'}</td>
                       <td className="py-4 px-4"><OrderTypeLabel order={order} /></td>
