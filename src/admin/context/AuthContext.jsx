@@ -13,17 +13,26 @@ export function AuthProvider({ children }) {
     setIsAuthenticated(!!session);
   }, []);
 
+  // ✅ Staff Account Status Management — while a session is active, poll a
+  // cheap endpoint periodically. If a Super Admin deactivates this account
+  // while the staff member is sitting idle (not clicking anything), this
+  // catches it within the poll interval instead of only on their next
+  // deliberate action. request() in lib/api.js does the actual forced
+  // redirect the instant this call comes back 401/403.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const poll = setInterval(() => {
+      auth.me().catch(() => {}); // a failure here triggers the global redirect inside request()
+    }, 20000);
+    return () => clearInterval(poll);
+  }, [isAuthenticated]);
+
   const login = async (email, password) => {
-    try {
-      const data = await auth.login(email, password);
-      const session = auth.getSession();
-      setSession(session);
-      setIsAuthenticated(true);
-      return true;
-    } catch (err) {
-      console.error('Login error:', err.message);
-      return false;
-    }
+    const data = await auth.login(email, password); // let the caller catch and show err.message directly
+    const session = auth.getSession();
+    setSession(session);
+    setIsAuthenticated(true);
+    return true;
   };
 
   const logout = () => {

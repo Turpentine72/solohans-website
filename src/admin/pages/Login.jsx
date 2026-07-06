@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
@@ -15,20 +15,28 @@ export default function Login() {
   const { login } = useAuth();
   const { settings } = useSettings(); // ✅ dynamic settings
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // ✅ If we were just force-logged-out (deactivated account, or session
+  // invalidated from another device), show exactly why — this is the
+  // message request() in lib/api.js redirected here with.
+  useEffect(() => {
+    const sessionMsg = searchParams.get('sessionMsg');
+    if (sessionMsg) setError(sessionMsg);
+  }, [searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const success = await login(email, password);
-      if (success) {
-        navigate('/admin', { replace: true });
-      } else {
-        setError('Invalid email or password');
-      }
+      await login(email, password);
+      navigate('/admin', { replace: true });
     } catch (err) {
-      setError('Login failed. Please try again.');
+      // Show the real backend message — this is what surfaces the exact
+      // "Your account has been deactivated..." text when a deactivated
+      // staff member tries to log in.
+      setError(err.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }

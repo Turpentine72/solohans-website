@@ -19,6 +19,24 @@ async function request(path, options = {}) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
+
+    // ✅ Staff Account Status Management — forced logout. This is the single
+    // choke point every API call passes through, so it catches deactivation
+    // regardless of which page or action triggered the request. We only act
+    // on the specific 401/403 messages the backend uses for this (session
+    // invalidated / account deactivated) — an ordinary "wrong password" on
+    // the login form is untouched and handled by the caller as before.
+    if (res.status === 401 || res.status === 403) {
+      const msg = err.message || '';
+      const isForcedLogout = msg.includes('deactivated') || msg.includes('Session expired');
+      const onLoginPage = window.location.pathname.includes('/admin/login');
+      if (isForcedLogout && !onLoginPage) {
+        clearToken();
+        window.location.href = `/admin/login?sessionMsg=${encodeURIComponent(msg)}`;
+        return new Promise(() => {}); // navigation is already underway — never resolve
+      }
+    }
+
     throw new Error(err.message || 'API error');
   }
   return res.json();
@@ -32,6 +50,7 @@ export const auth = {
     return data;
   },
   logout: () => clearToken(),
+  me: () => request('/auth/me'),
   getSession: () => {
     const token = getToken();
     if (!token) return null;
@@ -125,6 +144,7 @@ export const reconciliation = {
 
 export const auditLogs = {
   getAll: () => request('/audit-logs'),
+  clear: () => request('/audit-logs', { method: 'DELETE' }),
 };
 
 export const expenses = {
