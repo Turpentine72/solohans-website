@@ -45,6 +45,7 @@ import OrderMeals from "./pages/OrderMeals";
 import AuditLog from "./admin/pages/AuditLog";
 import Profile from "./admin/pages/Profile";
 import StaffHistory from "./admin/pages/StaffHistory";
+import RolesPermissions from "./admin/pages/RolesPermissions";
 import ChefDashboard from "./admin/pages/ChefDashboard";
 import DeliveryDashboard from "./admin/pages/DeliveryDashboard";
 import Expenses from "./admin/pages/Expenses";
@@ -102,11 +103,11 @@ function App() {
                       <ProtectedRoute>
                         <AdminLayout>
                           <Routes>
-                            <Route index element={<Dashboard />} />
-                            <Route path="orders" element={<Orders />} />
-                            <Route path="payments" element={<PaymentVerification />} />
+                            <Route index element={<ProtectedRoute requiredPermission={{ module: 'dashboard', action: 'view' }}><Dashboard /></ProtectedRoute>} />
+                            <Route path="orders" element={<ProtectedRoute requiredPermission={{ module: 'orders', action: 'view' }}><Orders /></ProtectedRoute>} />
+                            <Route path="payments" element={<ProtectedRoute requiredPermission={{ module: 'payment_verification', action: 'view' }}><PaymentVerification /></ProtectedRoute>} />
                             <Route path="payout" element={<AdminPayout />} />   {/* 🆕 Payout route */}
-                            <Route path="menu" element={<MenuManagement />} />
+                            <Route path="menu" element={<ProtectedRoute requiredPermission={{ module: 'menu', action: 'view' }}><MenuManagement /></ProtectedRoute>} />
                             <Route path="categories" element={<Categories />} />
                             <Route path="customers" element={<Customers />} />
                             <Route path="reviews" element={<Reviews />} />
@@ -116,15 +117,16 @@ function App() {
                             <Route path="gallery" element={<GalleryManagement />} />
                             <Route path="delivery-zones" element={<DeliveryZones />} />
                             <Route path="stock" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper']}><StockManagement /></ProtectedRoute>} />
-                            <Route path="reconciliation" element={<ProtectedRoute allowedRoles={['admin', 'closing_staff']}><Reconciliation /></ProtectedRoute>} />
-                            <Route path="meal-inventory" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier']}><MealInventory /></ProtectedRoute>} />
-                            <Route path="ingredients" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier']}><Ingredients /></ProtectedRoute>} />
-                            <Route path="payment-reconciliation" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier', 'closing_staff']}><PaymentReconciliation /></ProtectedRoute>} />
-                            <Route path="pos" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier']}><POS /></ProtectedRoute>} />
-                            <Route path="staff" element={<ProtectedRoute allowedRoles={['admin']}><StaffManagement /></ProtectedRoute>} />
-                            <Route path="audit-log" element={<ProtectedRoute allowedRoles={['admin']}><AuditLog /></ProtectedRoute>} />
+                            <Route path="reconciliation" element={<ProtectedRoute allowedRoles={['admin', 'closing_staff']} requiredPermission={{ module: 'reconciliation', action: 'view' }}><Reconciliation /></ProtectedRoute>} />
+                            <Route path="meal-inventory" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier']} requiredPermission={{ module: 'meal_inventory', action: 'view' }}><MealInventory /></ProtectedRoute>} />
+                            <Route path="ingredients" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier']} requiredPermission={{ module: 'ingredients', action: 'view' }}><Ingredients /></ProtectedRoute>} />
+                            <Route path="payment-reconciliation" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier', 'closing_staff']} requiredPermission={{ module: 'reconciliation', action: 'view' }}><PaymentReconciliation /></ProtectedRoute>} />
+                            <Route path="pos" element={<ProtectedRoute allowedRoles={['admin', 'storekeeper', 'cashier']} requiredPermission={{ module: 'pos', action: 'view' }}><POS /></ProtectedRoute>} />
+                            <Route path="staff" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission={{ module: 'staff', action: 'view' }}><StaffManagement /></ProtectedRoute>} />
+                            <Route path="audit-log" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission={{ module: 'audit_log', action: 'view' }}><AuditLog /></ProtectedRoute>} />
                             <Route path="profile" element={<Profile />} />
-                            <Route path="staff-history" element={<ProtectedRoute allowedRoles={['admin']}><StaffHistory /></ProtectedRoute>} />
+                            <Route path="staff-history" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission={{ module: 'reports', action: 'view' }}><StaffHistory /></ProtectedRoute>} />
+                            <Route path="roles-permissions" element={<ProtectedRoute allowedRoles={['admin']}><RolesPermissions /></ProtectedRoute>} />
                             <Route path="kitchen" element={<ProtectedRoute allowedRoles={['admin', 'chef']}><ChefDashboard /></ProtectedRoute>} />
                             <Route path="deliveries" element={<ProtectedRoute allowedRoles={['admin', 'delivery_staff']}><DeliveryDashboard /></ProtectedRoute>} />
                             <Route path="expenses" element={<ProtectedRoute allowedRoles={['admin', 'closing_staff']}><Expenses /></ProtectedRoute>} />

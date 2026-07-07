@@ -18,6 +18,7 @@ import {
   Image,
   X,
   UserCog,
+  ShieldCheck,
   Package,
   ClipboardCheck,
   History,
@@ -31,10 +32,10 @@ import defaultLogo from '../../assets/5e82d2b1-ebb5-4e77-8fa1-91fae5baab69.png';
 
 const navItems = [
   { label: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/admin' },
-  { label: 'Orders', icon: <ShoppingBag size={20} />, path: '/admin/orders' },
-  { label: 'POS / New Sale', icon: <CreditCard size={20} />, path: '/admin/pos', roles: ['admin', 'storekeeper', 'cashier'] },
-  { label: 'Payment Verification', icon: <CreditCard size={20} />, path: '/admin/payments' },
-  { label: 'Menu Management', icon: <UtensilsCrossed size={20} />, path: '/admin/menu' },
+  { label: 'Orders', icon: <ShoppingBag size={20} />, path: '/admin/orders', module: 'orders' },
+  { label: 'POS / New Sale', icon: <CreditCard size={20} />, path: '/admin/pos', roles: ['admin', 'storekeeper', 'cashier'], module: 'pos' },
+  { label: 'Payment Verification', icon: <CreditCard size={20} />, path: '/admin/payments', module: 'payment_verification' },
+  { label: 'Menu Management', icon: <UtensilsCrossed size={20} />, path: '/admin/menu', module: 'menu' },
   { label: 'Categories', icon: <FolderTree size={20} />, path: '/admin/categories' },
   { label: 'Customers', icon: <Users size={20} />, path: '/admin/customers' },
   { label: 'Contact Messages', icon: <MessageSquare size={20} />, path: '/admin/contact-messages' },
@@ -44,16 +45,17 @@ const navItems = [
   { label: 'Gallery', icon: <Image size={20} />, path: '/admin/gallery' },
   { label: 'Delivery Zones', icon: <Truck size={20} />, path: '/admin/delivery-zones' },
   { label: 'Stock Management', icon: <Package size={20} />, path: '/admin/stock', roles: ['admin', 'storekeeper'] },
-  { label: 'Meal Inventory (Rice/Spaghetti/Boxes)', icon: <Package size={20} />, path: '/admin/meal-inventory', roles: ['admin', 'storekeeper', 'cashier'] },
-  { label: 'Ingredient Inventory (Shawarma/Hotdog)', icon: <Package size={20} />, path: '/admin/ingredients', roles: ['admin', 'storekeeper', 'cashier'] },
-  { label: 'Day Reconciliation', icon: <ClipboardCheck size={20} />, path: '/admin/reconciliation', roles: ['admin', 'closing_staff'] },
-  { label: 'Payment Reconciliation', icon: <ClipboardCheck size={20} />, path: '/admin/payment-reconciliation', roles: ['admin', 'storekeeper', 'cashier', 'closing_staff'] },
+  { label: 'Meal Inventory (Rice/Spaghetti/Boxes)', icon: <Package size={20} />, path: '/admin/meal-inventory', roles: ['admin', 'storekeeper', 'cashier'], module: 'meal_inventory' },
+  { label: 'Ingredient Inventory (Shawarma/Hotdog)', icon: <Package size={20} />, path: '/admin/ingredients', roles: ['admin', 'storekeeper', 'cashier'], module: 'ingredients' },
+  { label: 'Day Reconciliation', icon: <ClipboardCheck size={20} />, path: '/admin/reconciliation', roles: ['admin', 'closing_staff'], module: 'reconciliation' },
+  { label: 'Payment Reconciliation', icon: <ClipboardCheck size={20} />, path: '/admin/payment-reconciliation', roles: ['admin', 'storekeeper', 'cashier', 'closing_staff'], module: 'reconciliation' },
   { label: 'Expenses', icon: <Receipt size={20} />, path: '/admin/expenses', roles: ['admin', 'closing_staff'] },
-  { label: 'Staff Management', icon: <UserCog size={20} />, path: '/admin/staff', roles: ['admin'] },
-  { label: 'Staff History', icon: <History size={20} />, path: '/admin/staff-history', roles: ['admin'] },
+  { label: 'Staff Management', icon: <UserCog size={20} />, path: '/admin/staff', roles: ['admin'], module: 'staff' },
+  { label: 'Roles & Permissions', icon: <ShieldCheck size={20} />, path: '/admin/roles-permissions', roles: ['admin'] },
+  { label: 'Staff History', icon: <History size={20} />, path: '/admin/staff-history', roles: ['admin'], module: 'reports' },
   { label: 'Kitchen', icon: <ChefHat size={20} />, path: '/admin/kitchen', roles: ['admin', 'chef'] },
   { label: 'My Deliveries', icon: <Truck size={20} />, path: '/admin/deliveries', roles: ['admin', 'delivery_staff'] },
-  { label: 'Audit Log', icon: <History size={20} />, path: '/admin/audit-log', roles: ['admin'] },
+  { label: 'Audit Log', icon: <History size={20} />, path: '/admin/audit-log', roles: ['admin'], module: 'audit_log' },
   { label: 'My Profile', icon: <UserCircle size={20} />, path: '/admin/profile' },
   { label: 'Legal Pages', path: '/admin/legal', icon: <FileText size={18} /> },
   { label: 'Reports & Analytics', icon: <BarChart3 size={20} />, path: '/admin/reports' },
@@ -63,9 +65,15 @@ const navItems = [
 export default function Sidebar({ isOpen, toggle }) {
   const location = useLocation();
   const { settings } = useSettings(); // ✅ dynamic settings
-  const { session } = useAuth();
+  const { session, isSuperAdmin, hasPermission } = useAuth();
   const role = session?.role || 'admin';
-  const visibleNavItems = navItems.filter(item => !item.roles || item.roles.includes(role));
+  const visibleNavItems = navItems.filter(item => {
+    if (isSuperAdmin) return true; // unrestricted, always, per spec
+    if (!item.roles && !item.module) return true; // never gated at all — unchanged from before
+    const roleOk = !item.roles || item.roles.includes(role);
+    const permissionOk = !item.module || hasPermission(item.module, 'view');
+    return roleOk || permissionOk;
+  });
 
   // Use settings logo if available, otherwise fallback to default
   const logo = settings?.logo || defaultLogo;

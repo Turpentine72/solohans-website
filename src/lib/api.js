@@ -91,6 +91,8 @@ export const roles = {
   getAll: () => request('/roles'),
   create: (label) => request('/roles', { method: 'POST', body: JSON.stringify({ label }) }),
   delete: (id) => request(`/roles/${id}`, { method: 'DELETE' }),
+  getPermissionSchema: () => request('/roles/permission-schema'),
+  updatePermissions: (id, permissions) => request(`/roles/${id}/permissions`, { method: 'PATCH', body: JSON.stringify({ permissions }) }),
 };
 
 export const stock = {
