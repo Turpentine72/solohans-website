@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Search, Plus, Edit, Trash2, X, Star, Upload } from 'lucide-react';
-import { menuItems as menuItemsApi, categories as categoriesApi, uploadFile } from '../../lib/api';
+import { Search, Plus, Edit, Trash2, X, Star, Upload, ChefHat } from 'lucide-react';
+import { menuItems as menuItemsApi, categories as categoriesApi, ingredients as ingredientsApi, uploadFile } from '../../lib/api';
 
 export default function MenuManagement() {
   const [menuItems, setMenuItems] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [ingredientList, setIngredientList] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -19,12 +20,14 @@ export default function MenuManagement() {
     imagePreview: '',
     available: true,
     signature: false,
+    recipe: [], // [{ key, qtyPerUnit }] — powers automatic ingredient deduction
   });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchCategories();
     fetchMenuItems();
+    fetchIngredients();
   }, []);
 
   const fetchCategories = async () => {
@@ -41,6 +44,12 @@ export default function MenuManagement() {
       setMenuItems(Array.isArray(data) ? data : data.items || []);
     } catch (err) { console.error('Error fetching menu items:', err); }
     finally { setLoading(false); }
+  };
+
+  const fetchIngredients = async () => {
+    try {
+      setIngredientList(await ingredientsApi.getAll());
+    } catch (err) { console.error('Error fetching ingredients:', err); }
   };
 
   const filteredItems = menuItems.filter(item =>
@@ -63,6 +72,7 @@ export default function MenuManagement() {
       imagePreview: '',
       available: true,
       signature: false,
+      recipe: [],
     });
     setShowModal(true);
   };
@@ -78,6 +88,7 @@ export default function MenuManagement() {
       imagePreview: item.image,
       available: item.available,
       signature: item.signature,
+      recipe: Array.isArray(item.ingredients) ? item.ingredients.map((r) => ({ key: r.key, qtyPerUnit: r.qtyPerUnit })) : [],
     });
     setShowModal(true);
   };
@@ -98,6 +109,21 @@ export default function MenuManagement() {
     catch (err) { console.error('Upload error:', err); return null; }
   };
 
+  // ─── Recipe row helpers ────────────────────────────────────────────
+  const addRecipeRow = () => {
+    const firstUnused = ingredientList.find((i) => !form.recipe.some((r) => r.key === i.key));
+    if (!firstUnused) return alert('All available ingredients are already in this recipe, or none exist yet — create one on the Ingredient Inventory page first.');
+    setForm({ ...form, recipe: [...form.recipe, { key: firstUnused.key, qtyPerUnit: 1 }] });
+  };
+  const updateRecipeRow = (index, field, value) => {
+    const recipe = [...form.recipe];
+    recipe[index] = { ...recipe[index], [field]: field === 'qtyPerUnit' ? value : value };
+    setForm({ ...form, recipe });
+  };
+  const removeRecipeRow = (index) => {
+    setForm({ ...form, recipe: form.recipe.filter((_, i) => i !== index) });
+  };
+
   const handleSave = async () => {
     // Validation
     if (!form.name.trim()) {
@@ -111,6 +137,12 @@ export default function MenuManagement() {
     if (!form.category_id) {
       alert('Please select a category');
       return;
+    }
+    for (const row of form.recipe) {
+      if (!row.key || !(Number(row.qtyPerUnit) > 0)) {
+        alert('Every recipe row needs an ingredient and a quantity greater than 0.');
+        return;
+      }
     }
 
     setSaving(true);
@@ -135,6 +167,10 @@ export default function MenuManagement() {
       image: imageUrl,
       available: form.available,
       signature: form.signature,
+      // Generic recipe — this is what makes ingredient deduction "just work"
+      // in POS/website checkout for ANY menu item, not only the hardcoded
+      // Shawarma variants.
+      ingredients: form.recipe.map((r) => ({ key: r.key, qtyPerUnit: Number(r.qtyPerUnit) })),
     };
 
     try {
@@ -230,7 +266,7 @@ export default function MenuManagement() {
                   </div>
                   <p className="text-xs text-gray-500 mb-2">{getCategoryName(item)}</p>
                   <p className="text-sm text-gray-600 line-clamp-2 mb-3">{item.description}</p>
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
                     <button
                       onClick={() => toggleAvailability(item._id, item.available)}
                       className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
@@ -248,6 +284,11 @@ export default function MenuManagement() {
                       <Star size={12} fill={item.signature ? '#EAB308' : 'none'} />
                       {item.signature ? 'Signature' : 'Normal'}
                     </button>
+                    {Array.isArray(item.ingredients) && item.ingredients.length > 0 && (
+                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border bg-orange-50 text-orange-700 border-orange-200">
+                        <ChefHat size={12} /> Has Recipe
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center justify-between">
                     <button onClick={() => handleOpenEdit(item)} className="flex items-center gap-1 text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg text-sm font-medium transition-colors"><Edit size={14} /> Edit</button>
@@ -296,6 +337,46 @@ export default function MenuManagement() {
                 <div className="flex items-center gap-4">
                   <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={form.available} onChange={e => setForm({...form, available: e.target.checked})} className="w-4 h-4 rounded accent-[#C62828]" /><span className="text-sm">Available</span></label>
                   <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={form.signature} onChange={e => setForm({...form, signature: e.target.checked})} className="w-4 h-4 rounded accent-[#C62828]" /><span className="text-sm">Signature Dish</span></label>
+                </div>
+
+                {/* Recipe builder — links this item to the ingredient-deduction engine */}
+                <div className="pt-2 border-t">
+                  <div className="flex items-center justify-between mb-2 mt-3">
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5"><ChefHat size={16} /> Recipe (optional)</label>
+                    <button type="button" onClick={addRecipeRow} className="text-xs font-semibold text-[#C62828] hover:underline">+ Add ingredient</button>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-2">
+                    Link tracked ingredients so stock is deducted automatically on every sale — POS, website, everywhere.
+                    {ingredientList.length === 0 && ' No ingredients exist yet — add one on the Ingredient Inventory page first.'}
+                  </p>
+                  {form.recipe.length > 0 && (
+                    <div className="space-y-2">
+                      {form.recipe.map((row, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <select
+                            value={row.key}
+                            onChange={(e) => updateRecipeRow(idx, 'key', e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                          >
+                            {ingredientList.map((ing) => (
+                              <option key={ing.key} value={ing.key}>{ing.label} ({ing.pieceLabel})</option>
+                            ))}
+                          </select>
+                          <input
+                            type="number"
+                            min="1"
+                            value={row.qtyPerUnit}
+                            onChange={(e) => updateRecipeRow(idx, 'qtyPerUnit', e.target.value)}
+                            className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                            title="Quantity used per one unit sold"
+                          />
+                          <button type="button" onClick={() => removeRecipeRow(idx)} className="p-2 text-gray-400 hover:text-red-600">
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex justify-end gap-3 p-5 border-t">

@@ -135,6 +135,10 @@ export const paymentReconciliation = {
 // ─── NEW: Shawarma Bread / Hotdog dual-level pack+piece inventory ────────
 export const ingredients = {
   getReport: () => request('/ingredients/report'),
+  getAll: () => request('/ingredients'),
+  create: (data) => request('/ingredients', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id, data) => request(`/ingredients/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id) => request(`/ingredients/${id}`, { method: 'DELETE' }),
   restock: (key, packs) => request('/ingredients/restock', { method: 'POST', body: JSON.stringify({ key, packs }) }),
 };
 
