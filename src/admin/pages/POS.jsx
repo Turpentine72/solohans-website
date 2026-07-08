@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Plus, Trash2, CheckCircle, Store, UtensilsCrossed, Minus, Package, Banknote, ArrowLeftRight, CreditCard, Globe, Tag, RefreshCw, AlertTriangle, SplitSquareHorizontal, Receipt } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Store, UtensilsCrossed, Minus, Package, Banknote, ArrowLeftRight, CreditCard, Globe, Tag, RefreshCw, AlertTriangle, SplitSquareHorizontal, Receipt, Search, Bike } from 'lucide-react';
 import { pos as posApi, menuItems as menuItemsApi, orders as ordersApi, attendance as attendanceApi } from '../../lib/api';
 import { useSettings } from '../../context/SettingsContext';
 import {
@@ -9,6 +9,9 @@ import {
 } from '../../lib/pricing';
 
 const PAYMENT_TAG_ICONS = { Banknote, ArrowLeftRight, CreditCard, Globe, SplitSquareHorizontal };
+
+const PLATFORMS = ['Walk-in', 'Glovo', 'Chowdeck', 'Uber Eats', 'Other'];
+const PLATFORM_ID_LABEL = { Glovo: 'Glovo Order ID', Chowdeck: 'Chowdeck Order ID', 'Uber Eats': 'Uber Eats Order ID', Other: 'External Order ID' };
 
 const EXTRAS_CATALOG_FALLBACK = {
   hotdog: { label: 'Hotdog', price: 1000 },
@@ -39,6 +42,14 @@ export default function POS() {
   const [placing, setPlacing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+
+  // ─── Platform Order Recording ──────────────────────────────────────
+  const [platform, setPlatform] = useState('Walk-in');
+  const [externalOrderId, setExternalOrderId] = useState('');
+
+  // ─── Menu Items search + category filter ───────────────────────────
+  const [menuSearch, setMenuSearch] = useState('');
+  const [menuCategory, setMenuCategory] = useState('All');
 
   const [shift, setShift] = useState(null); // null = not on shift; object = active/completed shift record
   const [shiftLoading, setShiftLoading] = useState(true);
@@ -97,6 +108,22 @@ export default function POS() {
     }, 0);
   }, [selectedMenuItems, menuCatalog]);
 
+  // Categories are pulled live from whatever's actually on the menu —
+  // never hardcoded, so a brand-new category shows up automatically.
+  const menuCategories = useMemo(() => {
+    const set = new Set(menuCatalog.map((m) => m.category || 'Uncategorized'));
+    return ['All', ...Array.from(set).sort()];
+  }, [menuCatalog]);
+
+  const filteredMenuCatalog = useMemo(() => {
+    const q = menuSearch.trim().toLowerCase();
+    return menuCatalog.filter((item) => {
+      if (menuCategory !== 'All' && (item.category || 'Uncategorized') !== menuCategory) return false;
+      if (q && !item.name.toLowerCase().includes(q) && !(item.category || '').toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [menuCatalog, menuSearch, menuCategory]);
+
   const priced = useMemo(() => {
     const extrasArr = Object.entries(extras).filter(([, qty]) => qty > 0).map(([item, qty]) => ({ item, qty }));
     return priceCart({ mealPackages, extras: extrasArr, extrasCatalog: EXTRAS_CATALOG_FALLBACK });
@@ -122,7 +149,7 @@ export default function POS() {
   // longer true and must not keep showing next to a now-correct total.
   useEffect(() => {
     setError('');
-  }, [splitRows, paymentMethod, mealPackages, extras, selectedMenuItems, posSaleType]);
+  }, [splitRows, paymentMethod, mealPackages, extras, selectedMenuItems, posSaleType, platform, externalOrderId]);
 
   const addSplitRow = () => setSplitRows((prev) => [...prev, { method: 'CASH', amount: '' }]);
   const removeSplitRow = (idx) => setSplitRows((prev) => prev.filter((_, i) => i !== idx));
@@ -173,6 +200,9 @@ export default function POS() {
     if (!isOnActiveShift) return setError('You need to Start Work before making sales.');
     if (!allValid) return setError('Add at least one meal, menu item, or extra — and make sure any meal combo is 1–2 allowed items.');
     if (!posSaleType) return setError('Select an Order Type (Shop Sale or Restaurant Sale) before completing the sale.');
+    if (platform !== 'Walk-in' && !externalOrderId.trim()) {
+      return setError(`Enter the ${PLATFORM_ID_LABEL[platform]} before completing this sale.`);
+    }
     if (!paymentMethod) return setError('Select a payment method (Cash, Transfer, POS, or Split Payment) before completing the sale.');
     if (paymentMethod === 'SPLIT' && !splitExactMatch) {
       return setError(
@@ -190,7 +220,10 @@ export default function POS() {
       const splitPayments = paymentMethod === 'SPLIT'
         ? splitRows.filter((r) => Number(r.amount) > 0).map((r) => ({ method: r.method, amount: Number(r.amount) }))
         : undefined;
-      const res = await posApi.checkout({ cart, paymentMethod, splitPayments, customerName, posSaleType });
+      const res = await posApi.checkout({
+        cart, paymentMethod, splitPayments, customerName, posSaleType,
+        platform, externalOrderId: platform !== 'Walk-in' ? externalOrderId.trim() : '',
+      });
       setResult(res);
       loadShift();
       setMealPackages([emptyMealPackage()]);
@@ -200,6 +233,8 @@ export default function POS() {
       setSplitRows([{ method: 'CASH', amount: '' }, { method: 'TRANSFER', amount: '' }]);
       setPosSaleType('');
       setCustomerName('');
+      setPlatform('Walk-in');
+      setExternalOrderId('');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -318,22 +353,50 @@ export default function POS() {
             ) : menuCatalog.length === 0 ? (
               <p className="text-sm text-gray-400">No menu items available yet — add some in Menu Management.</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {menuCatalog.map((item) => {
-                  const qty = selectedMenuItems[item._id] || 0;
-                  return (
-                    <div key={item._id} className={`border rounded-lg p-3 ${qty > 0 ? 'border-[#C62828] bg-[#FFF8F0]' : 'border-gray-200'}`}>
-                      <p className="text-sm font-semibold text-gray-800">{item.name}</p>
-                      <p className="text-xs text-gray-500 mb-2">₦{item.price.toLocaleString()} each</p>
-                      <div className="flex items-center gap-2">
-                        <button type="button" onClick={() => setMenuItemQty(item._id, qty - 1)} className="w-7 h-7 flex items-center justify-center border rounded-full text-gray-500 hover:bg-gray-50"><Minus size={14} /></button>
-                        <span className="w-8 text-center font-semibold">{qty}</span>
-                        <button type="button" onClick={() => setMenuItemQty(item._id, qty + 1)} className="w-7 h-7 flex items-center justify-center border rounded-full text-gray-500 hover:bg-gray-50"><Plus size={14} /></button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <>
+                <div className="relative mb-3">
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={menuSearch}
+                    onChange={(e) => setMenuSearch(e.target.value)}
+                    placeholder="Search menu items…"
+                    className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {menuCategories.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setMenuCategory(cat)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${menuCategory === cat ? 'bg-[#C62828] text-white border-[#C62828]' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+                {filteredMenuCatalog.length === 0 ? (
+                  <p className="text-sm text-gray-400 py-4 text-center">No menu items found.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {filteredMenuCatalog.map((item) => {
+                      const qty = selectedMenuItems[item._id] || 0;
+                      return (
+                        <div key={item._id} className={`border rounded-lg p-3 ${qty > 0 ? 'border-[#C62828] bg-[#FFF8F0]' : 'border-gray-200'}`}>
+                          <p className="text-sm font-semibold text-gray-800">{item.name}</p>
+                          <p className="text-xs text-gray-500 mb-2">₦{item.price.toLocaleString()} each</p>
+                          <div className="flex items-center gap-2">
+                            <button type="button" onClick={() => setMenuItemQty(item._id, qty - 1)} className="w-7 h-7 flex items-center justify-center border rounded-full text-gray-500 hover:bg-gray-50"><Minus size={14} /></button>
+                            <span className="w-8 text-center font-semibold">{qty}</span>
+                            <button type="button" onClick={() => setMenuItemQty(item._id, qty + 1)} className="w-7 h-7 flex items-center justify-center border rounded-full text-gray-500 hover:bg-gray-50"><Plus size={14} /></button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -396,6 +459,29 @@ export default function POS() {
             <span>Total</span>
             <span className="text-[#C62828]">₦{grandTotal.toLocaleString()}</span>
           </div>
+
+          <p className="text-xs text-gray-500 mb-2 font-semibold">Platform Order</p>
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            {PLATFORMS.map((p) => (
+              <button
+                key={p}
+                type="button" onClick={() => setPlatform(p)}
+                className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold border ${platform === p ? 'bg-[#C62828] text-white border-[#C62828]' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+              >
+                {p !== 'Walk-in' && <Bike size={13} />} {p}
+              </button>
+            ))}
+          </div>
+          {platform !== 'Walk-in' && (
+            <input
+              type="text"
+              placeholder={`${PLATFORM_ID_LABEL[platform]} (required)`}
+              value={externalOrderId}
+              onChange={(e) => setExternalOrderId(e.target.value)}
+              className="w-full border border-orange-300 rounded-lg px-3 py-2 mb-4 text-sm"
+            />
+          )}
+          {platform === 'Walk-in' && <div className="mb-4" />}
 
           <p className="text-xs text-gray-500 mb-2 font-semibold">Order Type (Required)</p>
           <div className="grid grid-cols-2 gap-2 mb-4">
@@ -514,6 +600,9 @@ export default function POS() {
               <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-4 text-sm">
                 <p className="flex items-center gap-2 font-semibold text-green-700 mb-1"><CheckCircle size={16}/> Sale completed</p>
                 <p>Order #{result.order.order_id}</p>
+                {result.order.platform && result.order.platform !== 'Walk-in' && (
+                  <p className="flex items-center gap-1.5 text-gray-600"><Bike size={13} /> {result.order.platform} — {result.order.externalOrderId}</p>
+                )}
                 <p className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${tag.color}`}><TagIcon size={12} /> {tag.label}</p>
                 {result.order.paymentMethod === 'SPLIT' && result.order.splitPayments?.length > 0 && (
                   <div className="mt-2 space-y-1 border-t border-green-200 pt-2">
