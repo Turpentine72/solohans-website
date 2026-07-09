@@ -31,6 +31,7 @@ import Reviews from "./admin/pages/Reviews";
 import Notifications from "./admin/pages/Notifications";
 import Reports from "./admin/pages/Reports";
 import Settings from "./admin/pages/Settings";
+import Backups from "./admin/pages/Backups";
 import Legal from "./admin/pages/Legal";
 import Promotions from "./admin/pages/Promotions";
 import GalleryManagement from "./admin/pages/GalleryManagement";
@@ -108,7 +109,7 @@ function App() {
                             <Route index element={<ProtectedRoute requiredPermission={{ module: 'dashboard', action: 'view' }}><Dashboard /></ProtectedRoute>} />
                             <Route path="orders" element={<ProtectedRoute requiredPermission={{ module: 'orders', action: 'view' }}><Orders /></ProtectedRoute>} />
                             <Route path="payments" element={<ProtectedRoute requiredPermission={{ module: 'payment_verification', action: 'view' }}><PaymentVerification /></ProtectedRoute>} />
-                            <Route path="payout" element={<AdminPayout />} />   {/* 🆕 Payout route */}
+                            <Route path="payout" element={<ProtectedRoute allowedRoles={['admin']}><AdminPayout /></ProtectedRoute>} />   {/* 🆕 Payout route — admin only, moves real money */}
                             <Route path="menu" element={<ProtectedRoute requiredPermission={{ module: 'menu', action: 'view' }}><MenuManagement /></ProtectedRoute>} />
                             <Route path="categories" element={<Categories />} />
                             <Route path="customers" element={<Customers />} />
@@ -134,6 +135,7 @@ function App() {
                             <Route path="expenses" element={<ProtectedRoute allowedRoles={['admin', 'closing_staff']}><Expenses /></ProtectedRoute>} />
                             <Route path="reports" element={<Reports />} />
                             <Route path="settings" element={<Settings />} />
+                            <Route path="backups" element={<ProtectedRoute allowedRoles={['admin']}><Backups /></ProtectedRoute>} />
                             <Route path="legal" element={<Legal />} />
                           </Routes>
                         </AdminLayout>

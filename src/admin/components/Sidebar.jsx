@@ -25,6 +25,8 @@ import {
   ChefHat,
   UserCircle,
   Receipt,
+  Landmark,
+  DatabaseBackup,
 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
@@ -49,6 +51,7 @@ const navItems = [
   { label: 'Ingredient Inventory (Shawarma/Hotdog)', icon: <Package size={20} />, path: '/admin/ingredients', roles: ['admin', 'storekeeper', 'cashier'], module: 'ingredients' },
   { label: 'Day Reconciliation', icon: <ClipboardCheck size={20} />, path: '/admin/reconciliation', roles: ['admin', 'closing_staff'], module: 'reconciliation' },
   { label: 'Payment Reconciliation', icon: <ClipboardCheck size={20} />, path: '/admin/payment-reconciliation', roles: ['admin', 'storekeeper', 'cashier', 'closing_staff'], module: 'reconciliation' },
+  { label: 'Payouts', icon: <Landmark size={20} />, path: '/admin/payout', roles: ['admin'] },
   { label: 'Expenses', icon: <Receipt size={20} />, path: '/admin/expenses', roles: ['admin', 'closing_staff'] },
   { label: 'Staff Management', icon: <UserCog size={20} />, path: '/admin/staff', roles: ['admin'], module: 'staff' },
   { label: 'Roles & Permissions', icon: <ShieldCheck size={20} />, path: '/admin/roles-permissions', roles: ['admin'] },
@@ -59,6 +62,7 @@ const navItems = [
   { label: 'My Profile', icon: <UserCircle size={20} />, path: '/admin/profile' },
   { label: 'Legal Pages', path: '/admin/legal', icon: <FileText size={18} /> },
   { label: 'Reports & Analytics', icon: <BarChart3 size={20} />, path: '/admin/reports' },
+  { label: 'Backup & Restore', icon: <DatabaseBackup size={20} />, path: '/admin/backups', roles: ['admin'] },
   { label: 'Settings', icon: <Settings size={20} />, path: '/admin/settings' },
 ];
 

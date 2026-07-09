@@ -142,6 +142,36 @@ export const ingredients = {
   restock: (key, packs) => request('/ingredients/restock', { method: 'POST', body: JSON.stringify({ key, packs }) }),
 };
 
+export const backup = {
+  getAll: () => request('/backup'),
+  createManual: () => request('/backup/manual', { method: 'POST' }),
+  getSchedule: () => request('/backup/schedule'),
+  updateSchedule: (data) => request('/backup/schedule', { method: 'PUT', body: JSON.stringify(data) }),
+  restore: (id) => request(`/backup/${id}/restore`, { method: 'POST', body: JSON.stringify({ confirm: 'RESTORE' }) }),
+  // Downloads require the Bearer token, so this can't be a plain <a href> —
+  // fetch as a blob (with auth headers) and trigger the save dialog manually.
+  download: async (id, filename) => {
+    const res = await fetch(`${BASE_URL}/backup/${id}/download`, { headers: authHeaders() });
+    if (!res.ok) throw new Error('Download failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || `backup-${id}.json.gz`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
+};
+
+export const transfer = {
+  getBanks: () => request('/transfer/banks').then((r) => r.data),
+  createRecipient: (payload) => request('/transfer/recipient', { method: 'POST', body: JSON.stringify(payload) }).then((r) => r.data),
+  initiateTransfer: (payload) => request('/transfer/transfer', { method: 'POST', body: JSON.stringify(payload) }).then((r) => r.data),
+  finalizeTransfer: (payload) => request('/transfer/transfer/finalize', { method: 'POST', body: JSON.stringify(payload) }).then((r) => r.data),
+};
+
 export const reconciliation = {
   getExpected: () => request('/reconciliation/expected'),
   closeDay: (actualCounts) => request('/reconciliation/close-day', { method: 'POST', body: JSON.stringify({ actualCounts }) }),
