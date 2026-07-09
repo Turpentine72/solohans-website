@@ -193,6 +193,7 @@ export const orders = {
     return request(`/orders${q ? '?' + q : ''}`);
   },
   getOne: (id) => request(`/orders/${id}`),
+  getReceipt: (id) => request(`/orders/receipt/${id}`),
   updateStatus: (id, status) => request(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   updatePaymentStatus: (id, payment_status) =>
     request(`/orders/${id}/payment-status`, { method: 'PATCH', body: JSON.stringify({ payment_status }) }),

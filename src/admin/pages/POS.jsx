@@ -619,6 +619,14 @@ export default function POS() {
                   </div>
                 )}
                 <p className="mt-2 font-semibold">Amount: ₦{result.order.totalAmount.toLocaleString()}</p>
+                <a
+                  href={`/receipt/${result.order._id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#C62828] hover:underline"
+                >
+                  <Receipt size={13} /> View / Print Receipt
+                </a>
               </div>
             );
           })()}

@@ -16,6 +16,7 @@ import Terms from "./pages/Terms";
 import PaymentPolicy from "./pages/PaymentPolicy";
 import TrackOrder from "./pages/TrackOrder";
 import CompletePayment from "./pages/CompletePayment";
+import ReceiptPage from "./pages/ReceiptPage";
 
 // Admin imports
 import AdminLayout from "./admin/layouts/AdminLayout";
@@ -72,6 +73,7 @@ function App() {
                   <Route path="/payment-policy" element={<PaymentPolicy />} />
                   <Route path="/track-order" element={<TrackOrder />} />
                   <Route path="/track/:orderId" element={<TrackOrder />} />
+                  <Route path="/receipt/:id" element={<ReceiptPage />} />
                   <Route path="/complete-payment" element={<CompletePayment />} />
                   <Route path="/order-meal" element={<OrderMeals />} />
 

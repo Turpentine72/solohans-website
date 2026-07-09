@@ -432,7 +432,17 @@ export default function Orders() {
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between p-5 border-b sticky top-0 bg-white">
                 <h3 className="text-xl font-bold">{getOrderId(selectedOrder)}</h3>
-                <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
+                <div className="flex items-center gap-3">
+                  <a
+                    href={`/receipt/${selectedOrder._id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs font-semibold text-[#C62828] hover:underline"
+                  >
+                    <Receipt size={14} /> View Receipt
+                  </a>
+                  <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
+                </div>
               </div>
               <div className="p-5 space-y-5">
                 <div className={`flex items-center gap-3 p-4 rounded-xl border-2 ${getSalespersonName(selectedOrder) ? 'border-[#C62828] bg-red-50/40' : 'border-gray-200 bg-gray-50'}`}>
