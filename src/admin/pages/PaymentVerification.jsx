@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Search, RefreshCw, Calendar, ArrowLeft } from 'lucide-react';
+import { Search, RefreshCw, Calendar, ArrowLeft, AlertTriangle, FolderOpen, Lock } from 'lucide-react';
 import { orders as ordersApi } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 
@@ -107,10 +107,13 @@ export default function PaymentVerification() {
           </div>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 text-blue-700 p-4 rounded-xl text-sm mb-6">
-          ⚠️ Permanent record of every verified payment — these records cannot be removed.
-          <strong> This week: {thisWeekCount} payment(s). </strong>
-          Switch to Full Archive to see previous weeks organized by Year → Month → Week.
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 p-4 rounded-xl text-sm mb-6 flex items-start gap-2">
+          <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" />
+          <span>
+            Permanent record of every verified payment — these records cannot be removed.
+            <strong> This week: {thisWeekCount} payment(s). </strong>
+            Switch to Full Archive to see previous weeks organized by Year → Month → Week.
+          </span>
         </div>
 
         {/* Current Week / Full Archive toggle */}
@@ -214,8 +217,8 @@ export default function PaymentVerification() {
                       return (
                         <tr key={`header-${idx}`}>
                           <td colSpan={5} className="px-4 pt-6 pb-2">
-                            <span className="inline-block bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full">
-                              📁 {row.label}
+                            <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full">
+                              <FolderOpen size={13} /> {row.label}
                             </span>
                           </td>
                         </tr>
@@ -228,8 +231,8 @@ export default function PaymentVerification() {
                         <td className="py-4 px-4">{payment.customerName}</td>
                         <td className="py-4 px-4 font-medium">₦{payment.totalAmount?.toLocaleString()}</td>
                         <td className="py-4 px-4">
-                          <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                            Verified 🔒
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                            Verified <Lock size={11} />
                           </span>
                         </td>
                         <td className="py-4 px-4 text-gray-500">{new Date(payment.createdAt).toLocaleDateString()}</td>
