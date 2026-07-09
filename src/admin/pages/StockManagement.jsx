@@ -52,12 +52,12 @@ export default function StockManagement() {
 
   return (
     <>
-      <Helmet><title>Stock Management – Solohans Admin</title></Helmet>
+      <Helmet><title>Daily Dish Stock – Solohans Admin</title></Helmet>
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Stock Management</h1>
-            <p className="text-gray-500 text-sm mt-1">Set today's opening stock per dish. Sold and remaining update automatically as orders are approved.</p>
+            <h1 className="text-3xl font-bold text-gray-800">Daily Dish Stock</h1>
+            <p className="text-gray-500 text-sm mt-1">Set today's opening stock per dish (Shawarma, Hotdog, and any other menu item). This is separate from Meal Inventory (rice/spaghetti/boxes) and Ingredient Inventory (raw ingredients) — this page caps how many of each finished dish you're selling today.</p>
             {todayStock?.isClosed && (
               <p className="text-red-600 text-sm font-medium mt-1">⚠️ Today has already been closed via reconciliation — opening stock can't be changed again until tomorrow.</p>
             )}

@@ -99,6 +99,9 @@ export default function Receipt({ order, business, showActions = true }) {
 
         <div className="space-y-0.5 text-xs">
           {order.items_subtotal > 0 && <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>{naira(order.items_subtotal)}</span></div>}
+          {order.discount_amount > 0 && (
+            <div className="flex justify-between text-green-700"><span>{order.discount_label || 'Discount'}</span><span>−{naira(order.discount_amount)}</span></div>
+          )}
           {order.tax_amount > 0 && <div className="flex justify-between"><span className="text-gray-500">VAT ({order.tax_rate}%)</span><span>{naira(order.tax_amount)}</span></div>}
           {order.delivery_fee > 0 && <div className="flex justify-between"><span className="text-gray-500">Delivery Fee</span><span>{naira(order.delivery_fee)}</span></div>}
           <div className="flex justify-between text-base font-bold pt-1"><span>Total</span><span>{naira(order.totalAmount)}</span></div>

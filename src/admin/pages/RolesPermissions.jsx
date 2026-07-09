@@ -26,7 +26,7 @@ const ACTION_LABELS = {
 };
 
 export default function RolesPermissions() {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, refreshMe } = useAuth();
   const [rolesList, setRolesList] = useState([]);
   const [schema, setSchema] = useState({ modules: [], actions: [] });
   const [selectedRoleId, setSelectedRoleId] = useState('');
@@ -58,7 +58,7 @@ export default function RolesPermissions() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); refreshMe(); }, []);
 
   const selectRole = (role) => {
     setSelectedRoleId(role._id);

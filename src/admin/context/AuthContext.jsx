@@ -71,6 +71,14 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // ✅ Lets a page force an immediate isSuperAdmin/permissions refresh
+  // instead of waiting for the 20s poll — used by Roles & Permissions so
+  // a just-granted Super Admin status (e.g. from the one-time bootstrap
+  // in GET /roles) is reflected right away rather than up to 20s later.
+  const refreshMe = async () => {
+    try { await auth.me().then(applyMe); } catch { /* ignore — poll will retry */ }
+  };
+
   // ✅ The single source of truth every permission check in the app should
   // go through. Super Admin always passes, regardless of module/action.
   const hasPermission = useCallback(
@@ -79,7 +87,7 @@ export function AuthProvider({ children }) {
   );
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, session, isSuperAdmin, permissions, hasPermission, login, logout, resetPassword }}>
+    <AuthContext.Provider value={{ isAuthenticated, session, isSuperAdmin, permissions, hasPermission, login, logout, resetPassword, refreshMe }}>
       {children}
     </AuthContext.Provider>
   );

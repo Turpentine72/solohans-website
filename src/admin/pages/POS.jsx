@@ -47,6 +47,10 @@ export default function POS() {
   const [platform, setPlatform] = useState('Walk-in');
   const [externalOrderId, setExternalOrderId] = useState('');
 
+  // ─── Manual discount (staff-applied, e.g. loyalty/manager override) ──
+  const [discountAmount, setDiscountAmount] = useState('');
+  const [discountLabel, setDiscountLabel] = useState('');
+
   // ─── Menu Items search + category filter ───────────────────────────
   const [menuSearch, setMenuSearch] = useState('');
   const [menuCategory, setMenuCategory] = useState('All');
@@ -149,7 +153,7 @@ export default function POS() {
   // longer true and must not keep showing next to a now-correct total.
   useEffect(() => {
     setError('');
-  }, [splitRows, paymentMethod, mealPackages, extras, selectedMenuItems, posSaleType, platform, externalOrderId]);
+  }, [splitRows, paymentMethod, mealPackages, extras, selectedMenuItems, posSaleType, platform, externalOrderId, discountAmount, discountLabel]);
 
   const addSplitRow = () => setSplitRows((prev) => [...prev, { method: 'CASH', amount: '' }]);
   const removeSplitRow = (idx) => setSplitRows((prev) => prev.filter((_, i) => i !== idx));
@@ -203,6 +207,9 @@ export default function POS() {
     if (platform !== 'Walk-in' && !externalOrderId.trim()) {
       return setError(`Enter the ${PLATFORM_ID_LABEL[platform]} before completing this sale.`);
     }
+    if (Number(discountAmount) > 0 && !discountLabel.trim()) {
+      return setError('Add a short reason for the discount (e.g. "Loyalty discount") before completing the sale.');
+    }
     if (!paymentMethod) return setError('Select a payment method (Cash, Transfer, POS, or Split Payment) before completing the sale.');
     if (paymentMethod === 'SPLIT' && !splitExactMatch) {
       return setError(
@@ -223,6 +230,8 @@ export default function POS() {
       const res = await posApi.checkout({
         cart, paymentMethod, splitPayments, customerName, posSaleType,
         platform, externalOrderId: platform !== 'Walk-in' ? externalOrderId.trim() : '',
+        discountAmount: Number(discountAmount) || 0,
+        discountLabel: discountLabel.trim(),
       });
       setResult(res);
       loadShift();
@@ -235,6 +244,8 @@ export default function POS() {
       setCustomerName('');
       setPlatform('Walk-in');
       setExternalOrderId('');
+      setDiscountAmount('');
+      setDiscountLabel('');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -483,6 +494,20 @@ export default function POS() {
           )}
           {platform === 'Walk-in' && <div className="mb-4" />}
 
+          <p className="text-xs text-gray-500 mb-2 font-semibold">Discount (optional)</p>
+          <div className="flex gap-2 mb-4">
+            <input
+              type="number" min="0" placeholder="₦ Amount"
+              value={discountAmount} onChange={(e) => setDiscountAmount(e.target.value)}
+              className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            />
+            <input
+              type="text" placeholder="Reason (e.g. Loyalty discount)"
+              value={discountLabel} onChange={(e) => setDiscountLabel(e.target.value)}
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+
           <p className="text-xs text-gray-500 mb-2 font-semibold">Order Type (Required)</p>
           <div className="grid grid-cols-2 gap-2 mb-4">
             <button
@@ -619,6 +644,9 @@ export default function POS() {
                   </div>
                 )}
                 <p className="mt-2 font-semibold">Amount: ₦{result.order.totalAmount.toLocaleString()}</p>
+                {result.order.discount_amount > 0 && (
+                  <p className="text-green-700 text-xs">{result.order.discount_label || 'Discount'} applied: −₦{result.order.discount_amount.toLocaleString()}</p>
+                )}
                 <a
                   href={`/receipt/${result.order._id}`}
                   target="_blank"

@@ -69,12 +69,12 @@ export default function MealInventory() {
 
   return (
     <>
-      <Helmet><title>Stock Management – Solohans Admin</title></Helmet>
+      <Helmet><title>Meal Inventory – Solohans Admin</title></Helmet>
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Stock Management</h1>
-            <p className="text-gray-500 text-sm mt-1">One shared inventory for Website + Physical Store. Portions deduct automatically on every sale.</p>
+            <h1 className="text-3xl font-bold text-gray-800">Meal Inventory</h1>
+            <p className="text-gray-500 text-sm mt-1">One shared inventory for Website + Physical Store rice, spaghetti, and packaging. Portions deduct automatically on every sale. Separate from Daily Dish Stock (per-menu-item caps) and Ingredient Inventory (raw ingredients).</p>
           </div>
           <button onClick={load} className="flex items-center gap-2 border border-gray-200 px-4 py-2 rounded-full text-sm font-semibold hover:bg-gray-50">
             <RefreshCw size={16}/> Refresh
