@@ -120,6 +120,8 @@ export const inventory = {
   addExtra: (body) => request('/inventory/extras', { method: 'POST', body: JSON.stringify(body) }),
   setThreshold: (lowStockThreshold) => request('/inventory/threshold', { method: 'PATCH', body: JSON.stringify({ lowStockThreshold }) }),
   history: (limit = 100) => request(`/inventory/history?limit=${limit}`),
+  reset: (item, newRemaining, reason) => request('/inventory/reset', { method: 'POST', body: JSON.stringify({ item, newRemaining, reason }) }),
+  deleteExtra: (key, reason) => request(`/inventory/extras/${key}`, { method: 'DELETE', body: JSON.stringify({ reason }) }),
 };
 
 export const pos = {
@@ -150,6 +152,7 @@ export const ingredients = {
   create: (data) => request('/ingredients', { method: 'POST', body: JSON.stringify(data) }),
   update: (id, data) => request(`/ingredients/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id) => request(`/ingredients/${id}`, { method: 'DELETE' }),
+  reset: (id, newRemainingPieces, reason) => request(`/ingredients/${id}/reset`, { method: 'POST', body: JSON.stringify({ newRemainingPieces, reason }) }),
   restock: (key, packs) => request('/ingredients/restock', { method: 'POST', body: JSON.stringify({ key, packs }) }),
 };
 

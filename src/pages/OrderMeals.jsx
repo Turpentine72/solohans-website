@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Trash2, ShoppingBag, CheckCircle2, FileText, Receipt, Home } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import {
-  MEAL_TYPES, MEAL_LABELS, PROTEIN_PRICES, PROTEIN_LABELS,
+  MEAL_TYPES, MEAL_LABELS, PROTEIN_PRICES, PROTEIN_LABELS, CHICKEN_PROTEINS, TURKEY_PROTEINS,
   isComboAllowed, priceCart,
 } from '../lib/pricing';
 import { websiteCheckout, payments as paymentsApi, deliveryZones as deliveryZonesApi } from '../lib/api';
@@ -196,8 +196,21 @@ export default function OrderMeals() {
                 )}
 
                 <p className="text-xs text-gray-500 mb-2">Add Protein</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
-                  {Object.keys(PROTEIN_PRICES).map((p) => (
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Chicken</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                  {CHICKEN_PROTEINS.map((p) => (
+                    <button
+                      type="button" key={p}
+                      onClick={() => setProtein(idx, p)}
+                      className={`px-3 py-2 rounded-lg text-sm border text-left ${mp.protein === p ? 'bg-red-50 border-[#C62828] text-[#C62828] font-semibold' : 'border-gray-200 hover:bg-gray-50'}`}
+                    >
+                      {PROTEIN_LABELS[p]}<br /><span className="text-xs text-gray-500">₦{PROTEIN_PRICES[p].toLocaleString()}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Turkey</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                  {TURKEY_PROTEINS.map((p) => (
                     <button
                       type="button" key={p}
                       onClick={() => setProtein(idx, p)}

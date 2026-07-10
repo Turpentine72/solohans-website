@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Package, PlusCircle, AlertTriangle, RefreshCw, Pencil, Trash2, X, Plus } from 'lucide-react';
+import { Package, PlusCircle, AlertTriangle, RefreshCw, Pencil, Trash2, X, Plus, RotateCcw } from 'lucide-react';
 import { ingredients as ingredientsApi } from '../../lib/api';
 import { useAuth } from '../context/AuthContext';
 
 const emptyForm = { label: '', pieceLabel: '', piecesPerPack: '', lowStockThresholdPieces: '16' };
 
-function IngredientCard({ ing, onEdit, onDelete, canDelete }) {
+function IngredientCard({ ing, onEdit, onDelete, onReset, canDelete }) {
   return (
     <div className={`bg-white rounded-2xl shadow-sm border p-5 ${ing.outOfStock ? 'border-red-300' : ing.lowStock ? 'border-amber-300' : 'border-gray-100'}`}>
       <div className="flex items-center justify-between mb-3">
@@ -14,8 +14,9 @@ function IngredientCard({ ing, onEdit, onDelete, canDelete }) {
         <div className="flex items-center gap-1">
           {ing.outOfStock && <span className="flex items-center gap-1 text-red-600 text-xs font-semibold mr-1"><AlertTriangle size={14} /> OUT OF STOCK</span>}
           {!ing.outOfStock && ing.lowStock && <span className="flex items-center gap-1 text-amber-600 text-xs font-semibold mr-1"><AlertTriangle size={14} /> LOW STOCK</span>}
-          <button onClick={() => onEdit(ing)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg"><Pencil size={14} /></button>
-          {canDelete && <button onClick={() => onDelete(ing)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={14} /></button>}
+          <button onClick={() => onReset(ing)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg" title="Reset Stock"><RotateCcw size={14} /></button>
+          <button onClick={() => onEdit(ing)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg" title="Edit"><Pencil size={14} /></button>
+          {canDelete && <button onClick={() => onDelete(ing)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg" title="Delete"><Trash2 size={14} /></button>}
         </div>
       </div>
       <p className="text-xs text-gray-400 mb-3">Tracked in {ing.pieceLabel} pieces — {ing.piecesPerPack} per pack</p>
@@ -32,7 +33,7 @@ function IngredientCard({ ing, onEdit, onDelete, canDelete }) {
 }
 
 export default function Ingredients() {
-  const { session } = useAuth();
+  const { isSuperAdmin } = useAuth();
   const [report, setReport] = useState([]);
   const [loading, setLoading] = useState(true);
   const [restockKey, setRestockKey] = useState('');
@@ -46,7 +47,12 @@ export default function Ingredients() {
   const [form, setForm] = useState(emptyForm);
   const [formSaving, setFormSaving] = useState(false);
 
-  const isAdmin = session?.role === 'admin';
+  // Reset Stock modal
+  const [resetTarget, setResetTarget] = useState(null);
+  const [resetValue, setResetValue] = useState('');
+  const [resetReason, setResetReason] = useState('');
+  const [resetSaving, setResetSaving] = useState(false);
+
 
   const load = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -130,6 +136,30 @@ export default function Ingredients() {
     }
   };
 
+  const openReset = (ing) => {
+    setResetTarget(ing);
+    setResetValue(String(ing.remainingPieces));
+    setResetReason('');
+  };
+
+  const handleResetConfirm = async () => {
+    if (resetValue === '' || Number(resetValue) < 0) {
+      alert('Enter a valid stock count (0 or more).');
+      return;
+    }
+    if (!window.confirm(`Reset "${resetTarget.label}" from ${resetTarget.remainingPieces} to ${resetValue} ${resetTarget.pieceLabel}(s)? This corrects the current count without affecting sales history.`)) return;
+    setResetSaving(true);
+    try {
+      await ingredientsApi.reset(resetTarget._id, Number(resetValue), resetReason.trim());
+      setResetTarget(null);
+      await load();
+    } catch (err) {
+      alert(`Failed: ${err.message}`);
+    } finally {
+      setResetSaving(false);
+    }
+  };
+
   return (
     <>
       <Helmet><title>Ingredient Inventory – Solohans Admin</title></Helmet>
@@ -174,7 +204,7 @@ export default function Ingredients() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {report.map((ing) => (
-              <IngredientCard key={ing.key} ing={ing} onEdit={openEdit} onDelete={handleDelete} canDelete={isAdmin} />
+              <IngredientCard key={ing.key} ing={ing} onEdit={openEdit} onDelete={handleDelete} onReset={openReset} canDelete={isSuperAdmin} />
             ))}
           </div>
         )}
@@ -211,6 +241,37 @@ export default function Ingredients() {
                 <button onClick={() => setShowForm(false)} className="px-5 py-3 border rounded-full font-medium hover:bg-gray-50">Cancel</button>
                 <button onClick={handleFormSave} disabled={formSaving} className="px-5 py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C] disabled:opacity-60">
                   {formSaving ? 'Saving…' : editing ? 'Save Changes' : 'Create Ingredient'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {resetTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm">
+              <div className="flex items-center justify-between p-5 border-b">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2"><RotateCcw size={18} /> Reset Stock</h3>
+                <button onClick={() => setResetTarget(null)} className="text-gray-400 hover:text-gray-600"><X size={22} /></button>
+              </div>
+              <div className="p-5 space-y-4">
+                <p className="text-sm text-gray-600">
+                  Correct <strong>{resetTarget.label}</strong>'s current stock after a physical count. This changes the count only — sales history is never affected.
+                </p>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Current count: {resetTarget.remainingPieces} {resetTarget.pieceLabel}(s)</label>
+                  <label className="block text-sm font-medium mb-1 mt-3">New count ({resetTarget.pieceLabel}s)</label>
+                  <input type="number" min="0" value={resetValue} onChange={(e) => setResetValue(e.target.value)} className="w-full px-4 py-3 border rounded-xl" autoFocus />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Reason (optional)</label>
+                  <input type="text" value={resetReason} onChange={(e) => setResetReason(e.target.value)} placeholder="e.g. Physical count correction" className="w-full px-4 py-3 border rounded-xl" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 p-5 border-t">
+                <button onClick={() => setResetTarget(null)} className="px-5 py-3 border rounded-full font-medium hover:bg-gray-50">Cancel</button>
+                <button onClick={handleResetConfirm} disabled={resetSaving} className="px-5 py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C] disabled:opacity-60">
+                  {resetSaving ? 'Saving…' : 'Reset Stock'}
                 </button>
               </div>
             </div>

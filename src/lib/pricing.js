@@ -23,6 +23,7 @@ export const PROTEIN_PRICES = {
   none: 3000,
   regularChicken: 4500,
   bigChicken: 5500,
+  extraBigChicken: 6500,
   regularTurkey: 6500,
   bigTurkey: 8500,
 };
@@ -31,9 +32,15 @@ export const PROTEIN_LABELS = {
   none: 'Meal Only',
   regularChicken: 'Regular Chicken',
   bigChicken: 'Big Chicken',
+  extraBigChicken: 'Extra Big Chicken',
   regularTurkey: 'Regular Turkey',
   bigTurkey: 'Big Turkey',
 };
+
+// ✅ Chicken and Turkey are deliberately separate groups — never combined
+// into one flat list — so the UI can render two clearly labeled sections.
+export const CHICKEN_PROTEINS = ['none', 'regularChicken', 'bigChicken', 'extraBigChicken'];
+export const TURKEY_PROTEINS = ['regularTurkey', 'bigTurkey'];
 
 export const EXTRA_PORTION_PRICE = 1500;
 
