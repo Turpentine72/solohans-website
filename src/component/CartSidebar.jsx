@@ -183,6 +183,7 @@ export default function CartSidebar() {
         // No payment yet — wait for admin to set the delivery fee.
         setOrderResult({
           orderId: newOrder.order_id,
+          mongoId: newOrder._id,
           email: form.email,
           deliveryMethod: 'delivery',
         });
@@ -221,6 +222,7 @@ export default function CartSidebar() {
               if (data.success) {
                 setOrderResult({
                   orderId: data.order_id ?? newOrder.order_id,
+                  mongoId: newOrder._id,
                   items: cartItems,
                   total: amountToPay,
                   deliveryFee: newOrder.delivery_fee || 0,
@@ -311,13 +313,14 @@ export default function CartSidebar() {
       if (notes.trim()) lines.push(``, `Note: ${notes.trim()}`);
 
       lines.push(``, `Track Order:`, `${window.location.origin}/track/${newOrder.order_id}`);
+      lines.push(``, `Receipt:`, `${window.location.origin}/receipt/${newOrder._id}`);
 
       const message = encodeURIComponent(lines.join('\n'));
       const whatsappNumber = (settings?.whatsapp || '+234 808 194 1298').replace(/[^\d]/g, '');
 
       window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
 
-      setOrderResult({ orderId: newOrder.order_id, email: form.email, deliveryMethod: newOrder.delivery_method, channel: 'whatsapp' });
+      setOrderResult({ orderId: newOrder.order_id, mongoId: newOrder._id, email: form.email, deliveryMethod: newOrder.delivery_method, channel: 'whatsapp' });
       clearCart();
       setStep('submitted');
     } catch (err) {
@@ -586,6 +589,16 @@ export default function CartSidebar() {
               )}
 
               <Link to={`/track/${orderResult.orderId}`} onClick={handlePlaceOrder} className="w-full inline-block py-3 mb-3 border-2 border-[#C62828] text-[#C62828] rounded-full font-semibold hover:bg-[#FFF8F0]">Track This Order</Link>
+              {orderResult.mongoId && (
+                <a
+                  href={`/receipt/${orderResult.mongoId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-1.5 py-3 mb-3 text-sm font-semibold text-gray-500 hover:text-[#C62828]"
+                >
+                  <Receipt size={15} /> View / Download Receipt
+                </a>
+              )}
               <button onClick={handlePlaceOrder} className="w-full py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C]">Close & Continue Shopping</button>
             </div>
           )}
@@ -638,6 +651,16 @@ export default function CartSidebar() {
               )}
 
               <Link to={`/track/${orderResult.orderId}`} onClick={handlePlaceOrder} className="w-full inline-block py-3 mb-3 border-2 border-[#C62828] text-[#C62828] rounded-full font-semibold hover:bg-[#FFF8F0]">Track This Order</Link>
+              {orderResult.mongoId && (
+                <a
+                  href={`/receipt/${orderResult.mongoId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-1.5 py-3 mb-3 text-sm font-semibold text-gray-500 hover:text-[#C62828]"
+                >
+                  <Receipt size={15} /> View / Download Receipt
+                </a>
+              )}
 
               <button onClick={handlePlaceOrder} className="w-full py-3 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C]">Close & Continue Shopping</button>
             </div>

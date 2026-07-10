@@ -18,7 +18,18 @@ async function request(path, options = {}) {
     headers: { ...authHeaders(), ...options.headers },
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: res.statusText }));
+    let err;
+    try {
+      err = await res.json();
+    } catch {
+      // Body wasn't valid JSON — likely a proxy/timeout page (502/504) or an
+      // empty response, not our Express server's own error handler. Grab
+      // whatever text is there so the real problem is visible instead of a
+      // generic "API error".
+      let bodyText = '';
+      try { bodyText = (await res.clone().text() || '').trim(); } catch { /* ignore */ }
+      err = { message: res.statusText ? `${res.statusText} (${res.status})` : `Request failed (${res.status})${bodyText ? ` — ${bodyText.slice(0, 200)}` : ''}` };
+    }
 
     // ✅ Staff Account Status Management — forced logout. This is the single
     // choke point every API call passes through, so it catches deactivation
