@@ -11,7 +11,7 @@ import { useAuth } from '../context/AuthContext';
  * pages working for staff who haven't been migrated to a custom role yet,
  * while still honoring the new grant if given).
  */
-export default function ProtectedRoute({ children, allowedRoles, requiredPermission }) {
+export default function ProtectedRoute({ children, allowedRoles, requiredPermission, requireSuperAdmin }) {
   const { isAuthenticated, session, isSuperAdmin, hasPermission } = useAuth();
 
   if (!isAuthenticated) {
@@ -20,14 +20,39 @@ export default function ProtectedRoute({ children, allowedRoles, requiredPermiss
 
   if (isSuperAdmin) return children; // unrestricted, always, per spec
 
-  const roleOk = !allowedRoles || allowedRoles.includes(session?.role);
-  const permissionOk = !requiredPermission || hasPermission(requiredPermission.module, requiredPermission.action);
+  // 🔒 A small number of routes (Backup & Restore, Payouts) move real money
+  // or can destroy/replace the entire database. Those are Super-Admin-only
+  // full stop — never delegatable through the normal permission system,
+  // matching the same hardcoded isSuperAdmin gate on their backend routes.
+  if (requireSuperAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+        <ShieldAlert size={48} className="text-gray-300 mb-4" />
+        <h2 className="text-xl font-bold text-gray-700 mb-2">Super Admin Only</h2>
+        <p className="text-gray-500 max-w-sm">This page can only be accessed by a Super Admin.</p>
+      </div>
+    );
+  }
 
-  // If neither restriction was specified at all, the route is open to any
-  // logged-in staff member (matches previous behavior for pages that never
-  // had an allowedRoles prop).
-  const restricted = allowedRoles || requiredPermission;
-  const allowed = !restricted || roleOk || permissionOk;
+  // ✅ Only OR the checks that were actually specified. Previously, giving
+  // only ONE of allowedRoles/requiredPermission still passed automatically
+  // regardless of that one check's result, because the unspecified check
+  // defaulted to "true" and got OR'd in — silently opening the route to
+  // every logged-in user. Now: if only one is specified, only that one is
+  // evaluated; if both are specified, either passing is sufficient
+  // (useful while migrating a page from role-based to permission-based);
+  // if neither is specified, the route is intentionally open to any
+  // logged-in staff member.
+  let allowed;
+  if (allowedRoles && requiredPermission) {
+    allowed = allowedRoles.includes(session?.role) || hasPermission(requiredPermission.module, requiredPermission.action);
+  } else if (allowedRoles) {
+    allowed = allowedRoles.includes(session?.role);
+  } else if (requiredPermission) {
+    allowed = hasPermission(requiredPermission.module, requiredPermission.action);
+  } else {
+    allowed = true;
+  }
 
   if (!allowed) {
     return (

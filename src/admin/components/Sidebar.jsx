@@ -33,50 +33,58 @@ import { useAuth } from '../context/AuthContext';
 import defaultLogo from '../../assets/5e82d2b1-ebb5-4e77-8fa1-91fae5baab69.png';
 
 const navItems = [
-  { label: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/admin' },
+  { label: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/admin', module: 'dashboard' },
   { label: 'Orders', icon: <ShoppingBag size={20} />, path: '/admin/orders', module: 'orders' },
-  { label: 'POS / New Sale', icon: <CreditCard size={20} />, path: '/admin/pos', roles: ['admin', 'storekeeper', 'cashier'], module: 'pos' },
+  { label: 'POS / New Sale', icon: <CreditCard size={20} />, path: '/admin/pos', module: 'pos' },
   { label: 'Payment Verification', icon: <CreditCard size={20} />, path: '/admin/payments', module: 'payment_verification' },
   { label: 'Menu Management', icon: <UtensilsCrossed size={20} />, path: '/admin/menu', module: 'menu' },
-  { label: 'Categories', icon: <FolderTree size={20} />, path: '/admin/categories' },
-  { label: 'Customers', icon: <Users size={20} />, path: '/admin/customers' },
-  { label: 'Contact Messages', icon: <MessageSquare size={20} />, path: '/admin/contact-messages' },
-  { label: 'Reviews & Testimonials', icon: <Star size={20} />, path: '/admin/reviews' },
-  { label: 'Notifications', icon: <Bell size={20} />, path: '/admin/notifications' },
-  { label: 'Promotions', icon: <Gift size={20} />, path: '/admin/promotions' },
-  { label: 'Gallery', icon: <Image size={20} />, path: '/admin/gallery' },
-  { label: 'Delivery Zones', icon: <Truck size={20} />, path: '/admin/delivery-zones' },
-  { label: 'Daily Dish Stock', icon: <Package size={20} />, path: '/admin/stock', roles: ['admin', 'storekeeper'] },
-  { label: 'Meal Inventory (Rice/Spaghetti/Boxes)', icon: <Package size={20} />, path: '/admin/meal-inventory', roles: ['admin', 'storekeeper', 'cashier'], module: 'meal_inventory' },
-  { label: 'Ingredient Inventory (Shawarma/Hotdog)', icon: <Package size={20} />, path: '/admin/ingredients', roles: ['admin', 'storekeeper', 'cashier'], module: 'ingredients' },
-  { label: 'Day Reconciliation', icon: <ClipboardCheck size={20} />, path: '/admin/reconciliation', roles: ['admin', 'closing_staff'], module: 'reconciliation' },
-  { label: 'Payment Reconciliation', icon: <ClipboardCheck size={20} />, path: '/admin/payment-reconciliation', roles: ['admin', 'storekeeper', 'cashier', 'closing_staff'], module: 'reconciliation' },
-  { label: 'Payouts', icon: <Landmark size={20} />, path: '/admin/payout', roles: ['admin'] },
-  { label: 'Expenses', icon: <Receipt size={20} />, path: '/admin/expenses', roles: ['admin', 'closing_staff'] },
-  { label: 'Staff Management', icon: <UserCog size={20} />, path: '/admin/staff', roles: ['admin'], module: 'staff' },
-  { label: 'Roles & Permissions', icon: <ShieldCheck size={20} />, path: '/admin/roles-permissions', roles: ['admin'] },
-  { label: 'Staff History', icon: <History size={20} />, path: '/admin/staff-history', roles: ['admin'], module: 'reports' },
-  { label: 'Kitchen', icon: <ChefHat size={20} />, path: '/admin/kitchen', roles: ['admin', 'chef'] },
-  { label: 'My Deliveries', icon: <Truck size={20} />, path: '/admin/deliveries', roles: ['admin', 'delivery_staff'] },
-  { label: 'Audit Log', icon: <History size={20} />, path: '/admin/audit-log', roles: ['admin'], module: 'audit_log' },
-  { label: 'My Profile', icon: <UserCircle size={20} />, path: '/admin/profile' },
-  { label: 'Legal Pages', path: '/admin/legal', icon: <FileText size={18} /> },
-  { label: 'Reports & Analytics', icon: <BarChart3 size={20} />, path: '/admin/reports' },
-  { label: 'Backup & Restore', icon: <DatabaseBackup size={20} />, path: '/admin/backups', roles: ['admin'] },
-  { label: 'Settings', icon: <Settings size={20} />, path: '/admin/settings' },
+  { label: 'Categories', icon: <FolderTree size={20} />, path: '/admin/categories', module: 'categories' },
+  { label: 'Customers', icon: <Users size={20} />, path: '/admin/customers', module: 'customers' },
+  { label: 'Contact Messages', icon: <MessageSquare size={20} />, path: '/admin/contact-messages', module: 'contacts' },
+  { label: 'Reviews & Testimonials', icon: <Star size={20} />, path: '/admin/reviews', module: 'reviews' },
+  { label: 'Notifications', icon: <Bell size={20} />, path: '/admin/notifications' }, // personal/self-scoped — no module gate needed
+  { label: 'Promotions', icon: <Gift size={20} />, path: '/admin/promotions', module: 'promotions' },
+  { label: 'Gallery', icon: <Image size={20} />, path: '/admin/gallery', module: 'gallery' },
+  { label: 'Delivery Zones', icon: <Truck size={20} />, path: '/admin/delivery-zones', module: 'delivery_zones' },
+  { label: 'Daily Dish Stock', icon: <Package size={20} />, path: '/admin/stock', module: 'daily_stock' },
+  { label: 'Meal Inventory (Rice/Spaghetti/Boxes)', icon: <Package size={20} />, path: '/admin/meal-inventory', module: 'meal_inventory' },
+  { label: 'Ingredient Inventory (Shawarma/Hotdog)', icon: <Package size={20} />, path: '/admin/ingredients', module: 'ingredients' },
+  { label: 'Day Reconciliation', icon: <ClipboardCheck size={20} />, path: '/admin/reconciliation', module: 'reconciliation' },
+  { label: 'Payment Reconciliation', icon: <ClipboardCheck size={20} />, path: '/admin/payment-reconciliation', module: 'payment_reconciliation' },
+  { label: 'Payouts', icon: <Landmark size={20} />, path: '/admin/payout', superAdminOnly: true },
+  { label: 'Expenses', icon: <Receipt size={20} />, path: '/admin/expenses', module: 'expenses' },
+  { label: 'Staff Management', icon: <UserCog size={20} />, path: '/admin/staff', module: 'staff' },
+  { label: 'Roles & Permissions', icon: <ShieldCheck size={20} />, path: '/admin/roles-permissions', module: 'roles' },
+  { label: 'Staff History', icon: <History size={20} />, path: '/admin/staff-history', module: 'staff_history' },
+  { label: 'Kitchen', icon: <ChefHat size={20} />, path: '/admin/kitchen', module: 'kitchen' },
+  { label: 'My Deliveries', icon: <Truck size={20} />, path: '/admin/deliveries', module: 'delivery' },
+  { label: 'Audit Log', icon: <History size={20} />, path: '/admin/audit-log', module: 'audit_log' },
+  { label: 'My Profile', icon: <UserCircle size={20} />, path: '/admin/profile' }, // universal — every logged-in staff member has their own profile
+  { label: 'Legal Pages', path: '/admin/legal', icon: <FileText size={18} /> }, // universal
+  { label: 'Reports & Analytics', icon: <BarChart3 size={20} />, path: '/admin/reports', module: 'reports' },
+  { label: 'Backup & Restore', icon: <DatabaseBackup size={20} />, path: '/admin/backups', superAdminOnly: true },
+  { label: 'Settings', icon: <Settings size={20} />, path: '/admin/settings', module: 'settings' },
 ];
 
 export default function Sidebar({ isOpen, toggle }) {
   const location = useLocation();
   const { settings } = useSettings(); // ✅ dynamic settings
-  const { session, isSuperAdmin, hasPermission } = useAuth();
-  const role = session?.role || 'admin';
-  const visibleNavItems = navItems.filter(item => {
-    if (isSuperAdmin) return true; // unrestricted, always, per spec
-    if (!item.roles && !item.module) return true; // never gated at all — unchanged from before
-    const roleOk = !item.roles || item.roles.includes(role);
-    const permissionOk = !item.module || hasPermission(item.module, 'view');
-    return roleOk || permissionOk;
+  const { isSuperAdmin, hasPermission } = useAuth();
+
+  // ✅ One clean rule per item — closes a real bug in the previous version,
+  // where an item with ONLY a `roles` array (no `module`) was visible to
+  // EVERY logged-in staff member regardless of role, because the missing
+  // module check defaulted to "true" and got OR'd together with the role
+  // check. Payouts, Kitchen, My Deliveries, Daily Dish Stock, and Expenses
+  // were all affected. Now: Super Admin sees everything; a `module` entry
+  // is gated by that exact permission; `superAdminOnly` is a hard lock
+  // matching the same routes' backend enforcement; anything else (personal
+  // pages like Profile/Notifications/Legal) is universal by design.
+  const visibleNavItems = navItems.filter((item) => {
+    if (isSuperAdmin) return true;
+    if (item.superAdminOnly) return false;
+    if (item.module) return hasPermission(item.module, 'view');
+    return true;
   });
 
   // Use settings logo if available, otherwise fallback to default

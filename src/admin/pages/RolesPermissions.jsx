@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { ShieldCheck, ShieldAlert, Save, Plus, Trash2 } from 'lucide-react';
 import { roles as rolesApi } from '../../lib/api';
@@ -8,17 +8,41 @@ const MODULE_LABELS = {
   dashboard: 'Dashboard',
   orders: 'Orders / Sales History',
   pos: 'POS',
+  payment_verification: 'Payment Verification',
   menu: 'Menu Management',
+  categories: 'Categories',
   meal_inventory: 'Meal Inventory (Rice/Spaghetti/Boxes)',
   ingredients: 'Ingredient Inventory (Shawarma/Hotdog)',
+  daily_stock: 'Daily Dish Stock',
+  customers: 'Customers',
+  contacts: 'Contact Messages',
+  reviews: 'Reviews & Testimonials',
+  notifications: 'Notifications',
+  promotions: 'Promotions',
+  gallery: 'Gallery',
+  delivery_zones: 'Delivery Zones',
+  expenses: 'Expenses',
+  reconciliation: 'Day Reconciliation',
+  payment_reconciliation: 'Payment Reconciliation',
   staff: 'Staff Management',
   roles: 'Roles & Permissions',
-  reports: 'Staff History & Sales Reports',
-  payment_verification: 'Payment Verification',
-  reconciliation: 'Reconciliation',
+  staff_history: 'Staff History (Attendance)',
+  kitchen: 'Kitchen',
+  delivery: 'My Deliveries',
   audit_log: 'Audit Log',
   settings: 'Settings',
+  reports: 'Reports & Analytics',
 };
+
+// Grouped for a less overwhelming table — 27 flat rows is a lot to scan.
+const MODULE_GROUPS = [
+  { label: 'Overview', modules: ['dashboard', 'reports'] },
+  { label: 'Sales', modules: ['orders', 'pos', 'payment_verification', 'reconciliation', 'payment_reconciliation'] },
+  { label: 'Menu & Inventory', modules: ['menu', 'categories', 'meal_inventory', 'ingredients', 'daily_stock'] },
+  { label: 'Customer-Facing', modules: ['customers', 'contacts', 'reviews', 'notifications', 'promotions', 'gallery', 'delivery_zones'] },
+  { label: 'Operations', modules: ['expenses', 'kitchen', 'delivery'] },
+  { label: 'Administration', modules: ['staff', 'roles', 'staff_history', 'audit_log', 'settings'] },
+];
 
 const ACTION_LABELS = {
   view: 'View', create: 'Create', edit: 'Edit', delete: 'Delete',
@@ -184,7 +208,7 @@ export default function RolesPermissions() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50 text-gray-500">
+                    <thead className="bg-gray-50 text-gray-500 sticky top-0">
                       <tr>
                         <th className="py-3 px-4 text-left">Module</th>
                         {schema.actions.map((action) => (
@@ -193,22 +217,35 @@ export default function RolesPermissions() {
                       </tr>
                     </thead>
                     <tbody>
-                      {schema.modules.map((moduleName) => (
-                        <tr key={moduleName} className="border-t border-gray-100">
-                          <td className="py-2.5 px-4 font-medium text-gray-700 whitespace-nowrap">{MODULE_LABELS[moduleName] || moduleName}</td>
-                          {schema.actions.map((action) => (
-                            <td key={action} className="py-2.5 px-3 text-center">
-                              <input
-                                type="checkbox"
-                                checked={!!matrix[moduleName]?.[action]}
-                                onChange={() => toggle(moduleName, action)}
-                                disabled={!isSuperAdmin}
-                                className="w-4 h-4 accent-[#C62828] disabled:opacity-40"
-                              />
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
+                      {MODULE_GROUPS.map((group) => {
+                        const modulesInSchema = group.modules.filter((m) => schema.modules.includes(m));
+                        if (modulesInSchema.length === 0) return null;
+                        return (
+                          <Fragment key={group.label}>
+                            <tr className="bg-gray-50/70">
+                              <td colSpan={schema.actions.length + 1} className="py-1.5 px-4 text-xs font-bold text-gray-400 uppercase tracking-wide">
+                                {group.label}
+                              </td>
+                            </tr>
+                            {modulesInSchema.map((moduleName) => (
+                              <tr key={moduleName} className="border-t border-gray-100">
+                                <td className="py-2.5 px-4 font-medium text-gray-700 whitespace-nowrap">{MODULE_LABELS[moduleName] || moduleName}</td>
+                                {schema.actions.map((action) => (
+                                  <td key={action} className="py-2.5 px-3 text-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={!!matrix[moduleName]?.[action]}
+                                      onChange={() => toggle(moduleName, action)}
+                                      disabled={!isSuperAdmin}
+                                      className="w-4 h-4 accent-[#C62828] disabled:opacity-40"
+                                    />
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </Fragment>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

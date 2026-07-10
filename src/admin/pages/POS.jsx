@@ -8,7 +8,7 @@ import {
   RICE_TYPES, isComboAllowed, priceCart, PAYMENT_TAGS,
 } from '../../lib/pricing';
 
-const PAYMENT_TAG_ICONS = { Banknote, ArrowLeftRight, CreditCard, Globe, SplitSquareHorizontal };
+const PAYMENT_TAG_ICONS = { Banknote, ArrowLeftRight, CreditCard, Globe, SplitSquareHorizontal, Bike };
 
 const PLATFORMS = ['Walk-in', 'Glovo', 'Chowdeck', 'Uber Eats', 'Other'];
 const PLATFORM_ID_LABEL = { Glovo: 'Glovo Order ID', Chowdeck: 'Chowdeck Order ID', 'Uber Eats': 'Uber Eats Order ID', Other: 'External Order ID' };
@@ -45,6 +45,7 @@ export default function POS() {
 
   // ─── Platform Order Recording ──────────────────────────────────────
   const [platform, setPlatform] = useState('Walk-in');
+  const isThirdPartyPlatform = platform !== 'Walk-in';
   const [externalOrderId, setExternalOrderId] = useState('');
 
   // ─── Manual discount (staff-applied, e.g. loyalty/manager override) ──
@@ -203,20 +204,26 @@ export default function POS() {
     setError('');
     if (!isOnActiveShift) return setError('You need to Start Work before making sales.');
     if (!allValid) return setError('Add at least one meal, menu item, or extra — and make sure any meal combo is 1–2 allowed items.');
-    if (!posSaleType) return setError('Select an Order Type (Shop Sale or Restaurant Sale) before completing the sale.');
     if (platform !== 'Walk-in' && !externalOrderId.trim()) {
       return setError(`Enter the ${PLATFORM_ID_LABEL[platform]} before completing this sale.`);
     }
     if (Number(discountAmount) > 0 && !discountLabel.trim()) {
       return setError('Add a short reason for the discount (e.g. "Loyalty discount") before completing the sale.');
     }
-    if (!paymentMethod) return setError('Select a payment method (Cash, Transfer, POS, or Split Payment) before completing the sale.');
-    if (paymentMethod === 'SPLIT' && !splitExactMatch) {
-      return setError(
-        totalPaid < grandTotal
-          ? `Split payment is short by ₦${remainingBalance.toLocaleString()}.`
-          : `Split payment exceeds the total by ₦${overpaidAmount.toLocaleString()}.`
-      );
+    if (!isThirdPartyPlatform) {
+      // Order Type and Payment Method only apply to Walk-in sales — a
+      // third-party platform order (Glovo, Chowdeck, etc.) skips both:
+      // payment was already collected by the platform, and there's no
+      // shop/restaurant distinction that matters for a delivery order.
+      if (!posSaleType) return setError('Select an Order Type (Shop Sale or Restaurant Sale) before completing the sale.');
+      if (!paymentMethod) return setError('Select a payment method (Cash, Transfer, POS, or Split Payment) before completing the sale.');
+      if (paymentMethod === 'SPLIT' && !splitExactMatch) {
+        return setError(
+          totalPaid < grandTotal
+            ? `Split payment is short by ₦${remainingBalance.toLocaleString()}.`
+            : `Split payment exceeds the total by ₦${overpaidAmount.toLocaleString()}.`
+        );
+      }
     }
 
     setPlacing(true);
@@ -228,7 +235,11 @@ export default function POS() {
         ? splitRows.filter((r) => Number(r.amount) > 0).map((r) => ({ method: r.method, amount: Number(r.amount) }))
         : undefined;
       const res = await posApi.checkout({
-        cart, paymentMethod, splitPayments, customerName, posSaleType,
+        cart,
+        paymentMethod: isThirdPartyPlatform ? undefined : paymentMethod,
+        splitPayments,
+        customerName,
+        posSaleType: isThirdPartyPlatform ? 'shop' : posSaleType,
         platform, externalOrderId: platform !== 'Walk-in' ? externalOrderId.trim() : '',
         discountAmount: Number(discountAmount) || 0,
         discountLabel: discountLabel.trim(),
@@ -508,35 +519,44 @@ export default function POS() {
             />
           </div>
 
-          <p className="text-xs text-gray-500 mb-2 font-semibold">Order Type (Required)</p>
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            <button
-              type="button" onClick={() => setPosSaleType('shop')}
-              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold border ${posSaleType === 'shop' ? 'bg-[#C62828] text-white border-[#C62828]' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
-            >
-              <Store size={16} /> Shop Sale
-            </button>
-            <button
-              type="button" onClick={() => setPosSaleType('restaurant')}
-              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold border ${posSaleType === 'restaurant' ? 'bg-[#C62828] text-white border-[#C62828]' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
-            >
-              <UtensilsCrossed size={16} /> Restaurant Sale
-            </button>
-          </div>
+          {isThirdPartyPlatform ? (
+            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg px-3 py-2.5 mb-4 text-sm">
+              <Bike size={16} className="flex-shrink-0" />
+              Payment is handled by {platform} — no payment method needed here. Enter the Order ID above, then complete the sale.
+            </div>
+          ) : (
+            <>
+              <p className="text-xs text-gray-500 mb-2 font-semibold">Order Type (Required)</p>
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <button
+                  type="button" onClick={() => setPosSaleType('shop')}
+                  className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold border ${posSaleType === 'shop' ? 'bg-[#C62828] text-white border-[#C62828]' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                >
+                  <Store size={16} /> Shop Sale
+                </button>
+                <button
+                  type="button" onClick={() => setPosSaleType('restaurant')}
+                  className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold border ${posSaleType === 'restaurant' ? 'bg-[#C62828] text-white border-[#C62828]' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                >
+                  <UtensilsCrossed size={16} /> Restaurant Sale
+                </button>
+              </div>
 
-          <p className="text-xs text-gray-500 mb-2 font-semibold">Payment Method (Required)</p>
-          <div className="space-y-2 mb-4">
-            {['CASH', 'TRANSFER', 'POS', 'SPLIT'].map((m) => {
-              const tag = PAYMENT_TAGS[m];
-              const TagIcon = PAYMENT_TAG_ICONS[tag.icon] || CreditCard;
-              return (
-                <label key={m} className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer text-sm">
-                  <input type="radio" name="paymentMethod" checked={paymentMethod === m} onChange={() => setPaymentMethod(m)} />
-                  <TagIcon size={14} /> {m === 'SPLIT' ? 'Split Payment' : m}
-                </label>
-              );
-            })}
-          </div>
+              <p className="text-xs text-gray-500 mb-2 font-semibold">Payment Method (Required)</p>
+              <div className="space-y-2 mb-4">
+                {['CASH', 'TRANSFER', 'POS', 'SPLIT'].map((m) => {
+                  const tag = PAYMENT_TAGS[m];
+                  const TagIcon = PAYMENT_TAG_ICONS[tag.icon] || CreditCard;
+                  return (
+                    <label key={m} className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer text-sm">
+                      <input type="radio" name="paymentMethod" checked={paymentMethod === m} onChange={() => setPaymentMethod(m)} />
+                      <TagIcon size={14} /> {m === 'SPLIT' ? 'Split Payment' : m}
+                    </label>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           {paymentMethod === 'SPLIT' && (
             <div className="border border-orange-200 bg-orange-50/50 rounded-xl p-3 mb-4 space-y-2">
@@ -612,7 +632,7 @@ export default function POS() {
 
           <button
             onClick={handleCompleteSale}
-            disabled={placing || !allValid || !isOnActiveShift || (paymentMethod === 'SPLIT' && !splitExactMatch)}
+            disabled={placing || !allValid || !isOnActiveShift || (!isThirdPartyPlatform && paymentMethod === 'SPLIT' && !splitExactMatch)}
             className="w-full bg-[#C62828] text-white py-3 rounded-full font-bold hover:bg-[#B71C1C] disabled:opacity-50"
           >
             {placing ? 'Saving…' : 'Complete Sale'}

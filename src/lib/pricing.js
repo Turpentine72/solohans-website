@@ -124,4 +124,5 @@ export const PAYMENT_TAGS = {
   POS: { label: 'POS', icon: 'CreditCard', color: 'bg-purple-100 text-purple-700' },
   SPLIT: { label: 'SPLIT PAYMENT', icon: 'SplitSquareHorizontal', color: 'bg-orange-100 text-orange-700' },
   'WEBSITE PAYMENT': { label: 'WEBSITE PAYMENT', icon: 'Globe', color: 'bg-teal-100 text-teal-700' },
+  PLATFORM: { label: 'PLATFORM PAYMENT', icon: 'Bike', color: 'bg-indigo-100 text-indigo-700' },
 };
