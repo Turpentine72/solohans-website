@@ -53,9 +53,11 @@ export default function MealInventory() {
   const [newExtra, setNewExtra] = useState({ key: '', label: '', price: '', usesPlastic: false });
   const [addingExtra, setAddingExtra] = useState(false);
 
+  const [error, setError] = useState('');
   const load = async () => {
     setLoading(true);
-    try { setInv(await inventoryApi.get()); } catch (err) { console.error(err); }
+    setError('');
+    try { setInv(await inventoryApi.get()); } catch (err) { console.error(err); setError(err.message || 'Failed to load inventory.'); }
     finally { setLoading(false); }
   };
 
@@ -133,7 +135,15 @@ export default function MealInventory() {
     }
   };
 
-  if (loading || !inv) return <div className="text-center py-12 text-gray-500">Loading…</div>;
+  if (loading) return <div className="text-center py-12 text-gray-500">Loading…</div>;
+  if (error || !inv) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-600 font-medium mb-3">{error || "Couldn't load Meal Inventory."}</p>
+        <button onClick={load} className="px-5 py-2.5 bg-[#C62828] text-white rounded-full font-semibold hover:bg-[#B71C1C]">Try Again</button>
+      </div>
+    );
+  }
 
   return (
     <>
