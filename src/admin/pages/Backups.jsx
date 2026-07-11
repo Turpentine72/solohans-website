@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { DatabaseBackup, Download, RotateCcw, ShieldAlert, Clock, HardDriveDownload } from 'lucide-react';
+import { DatabaseBackup, Download, RotateCcw, ShieldAlert, Clock, HardDriveDownload, Eraser } from 'lucide-react';
 import { backup as backupApi } from '../../lib/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -47,6 +47,21 @@ export default function Backups() {
       </div>
     );
   }
+
+  // ✅ Reset View — clears whatever's currently displayed on screen
+  // (the "restore complete" banner, any open restore-confirmation modal,
+  // the download-in-progress indicator) and reloads the canonical backup
+  // list + schedule fresh from the server. This is purely a UI reset — it
+  // never deletes, modifies, or touches any actual backup file or
+  // database record. Distinct from Audit Log's "Clear" button, which
+  // really does delete data; this one deliberately does not.
+  const handleResetView = () => {
+    setRestoreResult(null);
+    setRestoreTarget(null);
+    setConfirmText('');
+    setDownloadingId(null);
+    load();
+  };
 
   const handleCreateManual = async () => {
     setCreating(true);
@@ -107,9 +122,14 @@ export default function Backups() {
             <h1 className="text-3xl font-bold text-gray-800">Backup & Restore</h1>
             <p className="text-gray-500 text-sm mt-1">Covers Orders, Users/Staff, Roles &amp; Permissions, Menu Items, Ingredients, Inventory, Expenses, Settings, and more.</p>
           </div>
-          <button onClick={handleCreateManual} disabled={creating} className="flex items-center gap-2 bg-[#C62828] text-white px-5 py-2.5 rounded-full font-semibold hover:bg-[#B71C1C] disabled:opacity-50">
-            <DatabaseBackup size={18} /> {creating ? 'Backing up…' : 'Create Manual Backup'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={handleResetView} className="flex items-center gap-2 border border-gray-200 text-gray-600 px-5 py-2.5 rounded-full font-semibold hover:bg-gray-50" title="Clear the page back to its default view — does not delete any backups">
+              <Eraser size={18} /> Reset
+            </button>
+            <button onClick={handleCreateManual} disabled={creating} className="flex items-center gap-2 bg-[#C62828] text-white px-5 py-2.5 rounded-full font-semibold hover:bg-[#B71C1C] disabled:opacity-50">
+              <DatabaseBackup size={18} /> {creating ? 'Backing up…' : 'Create Manual Backup'}
+            </button>
+          </div>
         </div>
 
         {/* Schedule */}

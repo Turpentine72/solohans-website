@@ -4,10 +4,10 @@ import { CheckCircle2, AlertTriangle, Lock, Banknote, ArrowLeftRight, CreditCard
 import { paymentReconciliation as reconciliationApi } from '../../lib/api';
 
 const FIELDS = [
-  { key: 'cashTotal', label: 'Cash', icon: Banknote, iconColor: 'text-green-600', hint: 'Compare with physical cash' },
-  { key: 'transferTotal', label: 'Transfer', icon: ArrowLeftRight, iconColor: 'text-blue-600', hint: 'Compare with bank transfers' },
-  { key: 'posTotal', label: 'POS', icon: CreditCard, iconColor: 'text-purple-600', hint: 'Compare with POS account' },
-  { key: 'websitePaymentTotal', label: 'Website Payment', icon: Globe, iconColor: 'text-teal-600', hint: 'Compare with Paystack dashboard' },
+  { key: 'cashTotal', countKey: 'cashCount', label: 'Cash', icon: Banknote, iconColor: 'text-green-600', hint: 'Compare with physical cash' },
+  { key: 'transferTotal', countKey: 'transferCount', label: 'Transfer', icon: ArrowLeftRight, iconColor: 'text-blue-600', hint: 'Compare with bank transfers' },
+  { key: 'posTotal', countKey: 'posCount', label: 'POS', icon: CreditCard, iconColor: 'text-purple-600', hint: 'Compare with POS account' },
+  { key: 'websitePaymentTotal', countKey: 'websitePaymentCount', label: 'Website Payment', icon: Globe, iconColor: 'text-teal-600', hint: 'Compare with Paystack dashboard' },
 ];
 
 export default function PaymentReconciliation() {
@@ -75,10 +75,10 @@ export default function PaymentReconciliation() {
             {expected.closedRecord && (
               <div className="mt-4 text-sm text-left max-w-md mx-auto space-y-1">
                 {FIELDS.map((f) => (
-                  <p key={f.key}>{f.label}: expected ₦{expected.closedRecord.expected[f.key].toLocaleString()}, actual ₦{expected.closedRecord.actual[f.key].toLocaleString()} (variance {expected.closedRecord.variance[f.key] >= 0 ? '+' : ''}₦{expected.closedRecord.variance[f.key].toLocaleString()})</p>
+                  <p key={f.key}>{f.label} ({expected.closedRecord.expected[f.countKey] || 0} txns): expected ₦{expected.closedRecord.expected[f.key].toLocaleString()}, actual ₦{expected.closedRecord.actual[f.key].toLocaleString()} (variance {expected.closedRecord.variance[f.key] >= 0 ? '+' : ''}₦{expected.closedRecord.variance[f.key].toLocaleString()})</p>
                 ))}
                 {Object.entries(expected.closedRecord.platformBreakdown || {}).map(([platform, v]) => (
-                  <p key={platform}>{platform}: expected ₦{v.expected.toLocaleString()}, actual ₦{v.actual.toLocaleString()} (variance {v.variance >= 0 ? '+' : ''}₦{v.variance.toLocaleString()})</p>
+                  <p key={platform}>{platform} ({v.count || 0} txns): expected ₦{v.expected.toLocaleString()}, actual ₦{v.actual.toLocaleString()} (variance {v.variance >= 0 ? '+' : ''}₦{v.variance.toLocaleString()})</p>
                 ))}
               </div>
             )}
@@ -90,6 +90,7 @@ export default function PaymentReconciliation() {
                 <thead className="bg-gray-50 text-gray-500 text-sm">
                   <tr>
                     <th className="py-3 px-4">Payment Method</th>
+                    <th className="py-3 px-4">Transactions</th>
                     <th className="py-3 px-4">Expected (System)</th>
                     <th className="py-3 px-4">Actual (Physical / Account Count)</th>
                     <th className="py-3 px-4">Compare With</th>
@@ -99,6 +100,7 @@ export default function PaymentReconciliation() {
                   {FIELDS.map((f) => (
                     <tr key={f.key} className="border-t border-gray-100">
                       <td className="py-3 px-4 font-medium text-gray-800 flex items-center gap-2"><f.icon size={16} className={f.iconColor} /> {f.label}</td>
+                      <td className="py-3 px-4 text-gray-500">{expected?.expected?.[f.countKey] || 0}</td>
                       <td className="py-3 px-4">₦{(expected?.expected?.[f.key] || 0).toLocaleString()}</td>
                       <td className="py-3 px-4">
                         <input
@@ -113,16 +115,19 @@ export default function PaymentReconciliation() {
                       <td className="py-3 px-4 text-xs text-gray-400">{f.hint}</td>
                     </tr>
                   ))}
-                  {/* ✅ Third-party delivery platforms — one row per platform actually
-                      seen today (Glovo, Chowdeck, Uber Eats, Other, or anything added
-                      in the future — no code change needed when a new one shows up).
-                      "Actual" here is what the platform's own dashboard/settlement
-                      statement shows, so this catches a platform under/over-paying
-                      versus what was rung up at POS. */}
+                  {/* ✅ Third-party delivery platforms — Glovo, Chowdeck, Uber Eats,
+                      and Other are ALWAYS shown here, even at ₦0 / 0 transactions,
+                      so a platform never disappears from view just because it had
+                      no sales yet today. Anything added to RECONCILABLE_PLATFORMS
+                      on the backend shows up here automatically — no frontend
+                      change needed. "Actual" here is what the platform's own
+                      dashboard/settlement statement shows, so this catches a
+                      platform under/over-paying versus what was rung up at POS. */}
                   {platformKeys.map((platform) => (
                     <tr key={platform} className="border-t border-gray-100 bg-indigo-50/40">
                       <td className="py-3 px-4 font-medium text-gray-800 flex items-center gap-2"><Bike size={16} className="text-indigo-600" /> {platform}</td>
-                      <td className="py-3 px-4">₦{(expected.platformBreakdown[platform] || 0).toLocaleString()}</td>
+                      <td className="py-3 px-4 text-gray-500">{expected.platformBreakdown[platform]?.count || 0}</td>
+                      <td className="py-3 px-4">₦{(expected.platformBreakdown[platform]?.total || 0).toLocaleString()}</td>
                       <td className="py-3 px-4">
                         <input
                           type="number"
@@ -138,6 +143,7 @@ export default function PaymentReconciliation() {
                   ))}
                   <tr className="border-t border-gray-200 bg-gray-50 font-semibold">
                     <td className="py-3 px-4">Total Sales</td>
+                    <td colSpan="1"></td>
                     <td className="py-3 px-4">₦{(expected?.expected?.totalSales || 0).toLocaleString()}</td>
                     <td colSpan="2"></td>
                   </tr>

@@ -7,17 +7,8 @@ import {
   MEAL_TYPES, MEAL_LABELS, PROTEIN_PRICES, PROTEIN_LABELS, CHICKEN_PROTEINS, TURKEY_PROTEINS,
   isComboAllowed, priceCart,
 } from '../lib/pricing';
-import { websiteCheckout, payments as paymentsApi, deliveryZones as deliveryZonesApi } from '../lib/api';
+import { websiteCheckout, payments as paymentsApi, deliveryZones as deliveryZonesApi, inventory as inventoryApi } from '../lib/api';
 import { initializePaystack } from '../lib/paystack';
-
-const EXTRAS_CATALOG = {
-  hotdog: { label: 'Hotdog', price: 1000 },
-  water: { label: 'Water', price: 500 },
-  drinks: { label: 'Drinks', price: 1000 },
-  plantain: { label: 'Plantain', price: 1000 },
-  salad: { label: 'Salad', price: 1000 },
-  coleslaw: { label: 'Coleslaw', price: 1000 },
-};
 
 function emptyMealPackage() {
   return { meals: [], protein: 'none', extraPortions: [] };
@@ -43,8 +34,16 @@ export default function OrderMeals() {
   const [paid, setPaid] = useState(false);
   const [paying, setPaying] = useState(false);
 
+  const [extrasCatalog, setExtrasCatalog] = useState({});
+
   useEffect(() => {
     deliveryZonesApi.getActive().then(setDeliveryZones).catch(() => setDeliveryZones([]));
+    const loadExtras = () => inventoryApi.getPublicExtras().then(setExtrasCatalog).catch(() => setExtrasCatalog({}));
+    loadExtras();
+    // Same live source as POS/admin — an extra added, repriced, or restocked
+    // in Meal Inventory shows up here automatically within a few seconds.
+    const poll = setInterval(loadExtras, 15000);
+    return () => clearInterval(poll);
   }, []);
 
   const selectedZoneFee = deliveryZones.find((z) => z._id === deliveryZoneId)?.fee || 0;
@@ -52,8 +51,8 @@ export default function OrderMeals() {
 
   const priced = useMemo(() => {
     const extrasArr = Object.entries(extras).filter(([, qty]) => qty > 0).map(([item, qty]) => ({ item, qty }));
-    return priceCart({ mealPackages, extras: extrasArr, extrasCatalog: EXTRAS_CATALOG, deliveryFee: deliveryFeeForDisplay });
-  }, [mealPackages, extras, deliveryFeeForDisplay]);
+    return priceCart({ mealPackages, extras: extrasArr, extrasCatalog, deliveryFee: deliveryFeeForDisplay });
+  }, [mealPackages, extras, extrasCatalog, deliveryFeeForDisplay]);
 
   const itemsSubtotal = priced.mealsTotal + priced.extrasTotal;
   const taxAmount = taxEnabled ? Math.round(itemsSubtotal * (taxRate / 100)) : 0;
@@ -243,15 +242,29 @@ export default function OrderMeals() {
 
             <div className="bg-white rounded-2xl shadow-sm p-5">
               <h3 className="font-bold text-gray-800 mb-3">Extras</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {Object.entries(EXTRAS_CATALOG).map(([key, c]) => (
-                  <div key={key} className="border border-gray-200 rounded-lg p-3">
-                    <p className="text-sm font-semibold text-gray-800">{c.label}</p>
-                    <p className="text-xs text-gray-500 mb-2">₦{c.price.toLocaleString()} each</p>
-                    <input type="number" min="0" value={extras[key] || ''} onChange={(e) => setExtraQty(key, e.target.value)} placeholder="Qty" className="w-full border rounded-lg px-2 py-1 text-sm" />
-                  </div>
-                ))}
-              </div>
+              {Object.keys(extrasCatalog).length === 0 ? (
+                <p className="text-sm text-gray-400">No extras available right now.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {Object.entries(extrasCatalog).map(([key, c]) => {
+                    const outOfStock = c.remaining <= 0;
+                    return (
+                      <div key={key} className={`border rounded-lg p-3 ${outOfStock ? 'border-red-200 bg-red-50/40' : 'border-gray-200'}`}>
+                        <p className="text-sm font-semibold text-gray-800">{c.label}</p>
+                        <p className="text-xs text-gray-500 mb-1">₦{c.price.toLocaleString()} each</p>
+                        {outOfStock && <p className="text-xs text-red-600 font-semibold mb-2">Out of stock</p>}
+                        <input
+                          type="number" min="0" max={c.remaining > 0 ? c.remaining : 0}
+                          value={extras[key] || ''}
+                          onChange={(e) => setExtraQty(key, Math.min(Number(e.target.value) || 0, Math.max(0, c.remaining)))}
+                          placeholder="Qty" disabled={outOfStock}
+                          className="w-full border rounded-lg px-2 py-1 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">

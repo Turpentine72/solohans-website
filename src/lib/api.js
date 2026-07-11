@@ -115,6 +115,7 @@ export const stock = {
 // lunch boxes / extras) — separate from the per-menu-item `stock` above ───
 export const inventory = {
   get: () => request('/inventory'),
+  getPublicExtras: () => request('/inventory/public-extras'),
   restock: (item, quantity, reason) => request('/inventory/restock', { method: 'POST', body: JSON.stringify({ item, quantity, reason }) }),
   updateExtraPrice: (key, body) => request(`/inventory/extras/${key}`, { method: 'PATCH', body: JSON.stringify(body) }),
   addExtra: (body) => request('/inventory/extras', { method: 'POST', body: JSON.stringify(body) }),

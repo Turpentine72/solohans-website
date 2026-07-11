@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Plus, Trash2, CheckCircle, Store, UtensilsCrossed, Minus, Package, Banknote, ArrowLeftRight, CreditCard, Globe, Tag, RefreshCw, AlertTriangle, SplitSquareHorizontal, Receipt, Search, Bike } from 'lucide-react';
-import { pos as posApi, menuItems as menuItemsApi, orders as ordersApi, attendance as attendanceApi } from '../../lib/api';
+import { pos as posApi, menuItems as menuItemsApi, orders as ordersApi, attendance as attendanceApi, inventory as inventoryApi } from '../../lib/api';
 import { useSettings } from '../../context/SettingsContext';
 import {
   MEAL_TYPES, MEAL_LABELS, PROTEIN_PRICES, PROTEIN_LABELS, CHICKEN_PROTEINS, TURKEY_PROTEINS,
@@ -12,15 +12,6 @@ const PAYMENT_TAG_ICONS = { Banknote, ArrowLeftRight, CreditCard, Globe, SplitSq
 
 const PLATFORMS = ['Walk-in', 'Glovo', 'Chowdeck', 'Uber Eats', 'Other'];
 const PLATFORM_ID_LABEL = { Glovo: 'Glovo Order ID', Chowdeck: 'Chowdeck Order ID', 'Uber Eats': 'Uber Eats Order ID', Other: 'External Order ID' };
-
-const EXTRAS_CATALOG_FALLBACK = {
-  hotdog: { label: 'Hotdog', price: 1000 },
-  water: { label: 'Water', price: 500 },
-  drinks: { label: 'Drinks', price: 1000 },
-  plantain: { label: 'Plantain', price: 1000 },
-  salad: { label: 'Salad', price: 1000 },
-  coleslaw: { label: 'Coleslaw', price: 1000 },
-};
 
 function emptyMealPackage() {
   return { meals: [], protein: 'none', extraPortions: [] };
@@ -89,12 +80,44 @@ export default function POS() {
     }
   };
 
-  useEffect(() => {
+  const [liveInventory, setLiveInventory] = useState(null);
+  const [inventoryLoading, setInventoryLoading] = useState(true);
+
+  const loadMenuCatalog = () => {
     menuItemsApi.getAll({ available: true })
       .then((data) => setMenuCatalog(Array.isArray(data) ? data : data.items || []))
       .catch(() => setMenuCatalog([]))
       .finally(() => setMenuCatalogLoading(false));
+  };
+  const loadInventory = () => {
+    inventoryApi.get()
+      .then(setLiveInventory)
+      .catch(() => setLiveInventory(null))
+      .finally(() => setInventoryLoading(false));
+  };
+
+  useEffect(() => {
+    loadMenuCatalog();
+    loadInventory();
+    // ✅ Single source of truth: Meal Inventory. POS never keeps its own
+    // copy of meals/extras — it polls the live data so any add/edit/
+    // delete/activate/deactivate/reprice/restock made in Menu Management
+    // or Meal Inventory shows up here automatically, without a refresh.
+    const poll = setInterval(() => { loadMenuCatalog(); loadInventory(); }, 10000);
+    return () => clearInterval(poll);
   }, []);
+
+  // Extras catalog — built live from Meal Inventory's `extras` map, never
+  // hardcoded. Every extra that exists there appears here automatically,
+  // including its current stock, so nothing gets silently omitted.
+  const extrasCatalog = useMemo(() => {
+    if (!liveInventory?.extras) return {};
+    const catalog = {};
+    for (const [key, e] of Object.entries(liveInventory.extras)) {
+      catalog[key] = { label: e.label, price: e.price, remaining: e.remaining };
+    }
+    return catalog;
+  }, [liveInventory]);
 
   const setMenuItemQty = (id, qty) => {
     const q = Math.max(0, Number(qty) || 0);
@@ -131,8 +154,8 @@ export default function POS() {
 
   const priced = useMemo(() => {
     const extrasArr = Object.entries(extras).filter(([, qty]) => qty > 0).map(([item, qty]) => ({ item, qty }));
-    return priceCart({ mealPackages, extras: extrasArr, extrasCatalog: EXTRAS_CATALOG_FALLBACK });
-  }, [mealPackages, extras]);
+    return priceCart({ mealPackages, extras: extrasArr, extrasCatalog });
+  }, [mealPackages, extras, extrasCatalog]);
 
   const itemsSubtotal = priced.totalAmount + menuItemsTotal;
   // ✅ Must match backend/utils/checkout.js exactly: taxAmount = round(itemsSubtotal * rate/100).
@@ -437,15 +460,33 @@ export default function POS() {
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
             <h3 className="font-bold text-gray-800 mb-3">Extras</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {Object.entries(EXTRAS_CATALOG_FALLBACK).map(([key, c]) => (
-                <div key={key} className="border border-gray-200 rounded-lg p-3">
-                  <p className="text-sm font-semibold text-gray-800">{c.label}</p>
-                  <p className="text-xs text-gray-500 mb-2">₦{c.price.toLocaleString()} each</p>
-                  <input type="number" min="0" value={extras[key] || ''} onChange={(e) => setExtraQty(key, e.target.value)} placeholder="Qty" className="w-full border rounded-lg px-2 py-1 text-sm" />
-                </div>
-              ))}
-            </div>
+            {inventoryLoading ? (
+              <p className="text-sm text-gray-400">Loading extras…</p>
+            ) : Object.keys(extrasCatalog).length === 0 ? (
+              <p className="text-sm text-gray-400">No extras set up yet — add some in Meal Inventory.</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {Object.entries(extrasCatalog).map(([key, c]) => {
+                  const outOfStock = c.remaining <= 0;
+                  return (
+                    <div key={key} className={`border rounded-lg p-3 ${outOfStock ? 'border-red-200 bg-red-50/40' : 'border-gray-200'}`}>
+                      <p className="text-sm font-semibold text-gray-800">{c.label}</p>
+                      <p className="text-xs text-gray-500 mb-1">₦{c.price.toLocaleString()} each</p>
+                      <p className={`text-xs mb-2 ${outOfStock ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
+                        {outOfStock ? 'Out of stock' : `${c.remaining} in stock`}
+                      </p>
+                      <input
+                        type="number" min="0" max={c.remaining > 0 ? c.remaining : 0}
+                        value={extras[key] || ''}
+                        onChange={(e) => setExtraQty(key, Math.min(Number(e.target.value) || 0, Math.max(0, c.remaining)))}
+                        placeholder="Qty" disabled={outOfStock}
+                        className="w-full border rounded-lg px-2 py-1 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
