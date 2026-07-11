@@ -57,8 +57,10 @@ export default function Receipt({ order, business, showActions = true }) {
         <div className="text-center mb-4">
           {business?.logo && <img src={business.logo} alt="" className="h-14 mx-auto mb-2 object-contain" />}
           <p className="font-bold text-base">{business?.name || 'Solohans Delicious Meals'}</p>
+          {business?.tagline && <p className="text-xs text-gray-500 italic">{business.tagline}</p>}
           {business?.address && <p className="text-xs text-gray-500">{business.address}</p>}
           {business?.phone && <p className="text-xs text-gray-500">{business.phone}</p>}
+          {business?.email && <p className="text-xs text-gray-500">{business.email}</p>}
         </div>
 
         <div className="border-t border-dashed border-gray-300 my-3" />

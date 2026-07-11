@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import AttendanceWidget from '../components/AttendanceWidget';
+import GlobalResetButton from '../components/GlobalResetButton';
 import { Menu } from 'lucide-react';
 import { setupAdminPushNotifications } from '../../lib/firebase';
 import { useAuth } from '../context/AuthContext';
@@ -44,6 +45,7 @@ export default function AdminLayout({ children }) {
               <p className="text-sm font-medium text-gray-800">{session?.name || session?.email}</p>
               <p className="text-xs text-gray-500 capitalize">{session?.role} • {new Date().toLocaleDateString()}</p>
             </div>
+            <GlobalResetButton />
             <AttendanceWidget />
           </div>
         </header>

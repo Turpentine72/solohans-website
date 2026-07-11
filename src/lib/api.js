@@ -180,6 +180,10 @@ export const backup = {
   },
 };
 
+export const globalReset = {
+  run: () => request('/reset/transactional-data', { method: 'POST', body: JSON.stringify({ confirm: 'RESET' }) }),
+};
+
 export const transfer = {
   getBanks: () => request('/transfer/banks').then((r) => r.data),
   createRecipient: (payload) => request('/transfer/recipient', { method: 'POST', body: JSON.stringify(payload) }).then((r) => r.data),
