@@ -22,6 +22,7 @@ import ReceiptPage from "./pages/ReceiptPage";
 import AdminLayout from "./admin/layouts/AdminLayout";
 import Dashboard from "./admin/pages/Dashboard";
 import Orders from "./admin/pages/Orders";
+import OrderHistory from "./admin/pages/OrderHistory";
 import PaymentVerification from "./admin/pages/PaymentVerification";
 import MenuManagement from "./admin/pages/MenuManagement";
 import Categories from "./admin/pages/Categories";
@@ -108,6 +109,7 @@ function App() {
                           <Routes>
                             <Route index element={<ProtectedRoute requiredPermission={{ module: 'dashboard', action: 'view' }}><Dashboard /></ProtectedRoute>} />
                             <Route path="orders" element={<ProtectedRoute requiredPermission={{ module: 'orders', action: 'view' }}><Orders /></ProtectedRoute>} />
+                            <Route path="order-history" element={<ProtectedRoute requiredPermission={{ module: 'orders', action: 'view' }}><OrderHistory /></ProtectedRoute>} />
                             <Route path="payments" element={<ProtectedRoute requiredPermission={{ module: 'payment_verification', action: 'view' }}><PaymentVerification /></ProtectedRoute>} />
                             <Route path="payout" element={<ProtectedRoute requireSuperAdmin><AdminPayout /></ProtectedRoute>} />   {/* Super Admin only — moves real money */}
                             <Route path="menu" element={<ProtectedRoute requiredPermission={{ module: 'menu', action: 'view' }}><MenuManagement /></ProtectedRoute>} />

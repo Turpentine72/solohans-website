@@ -243,6 +243,10 @@ export const orders = {
   },
   getOne: (id) => request(`/orders/${id}`),
   getReceipt: (id) => request(`/orders/receipt/${id}`),
+  getHistory: (params = {}) => {
+    const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString();
+    return request(`/orders/history/unified${qs ? `?${qs}` : ''}`);
+  },
   updateStatus: (id, status) => request(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   updatePaymentStatus: (id, payment_status) =>
     request(`/orders/${id}/payment-status`, { method: 'PATCH', body: JSON.stringify({ payment_status }) }),

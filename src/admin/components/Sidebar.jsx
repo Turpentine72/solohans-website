@@ -35,6 +35,7 @@ import defaultLogo from '../../assets/5e82d2b1-ebb5-4e77-8fa1-91fae5baab69.png';
 const navItems = [
   { label: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/admin', module: 'dashboard' },
   { label: 'Orders', icon: <ShoppingBag size={20} />, path: '/admin/orders', module: 'orders' },
+  { label: 'Order History', icon: <History size={20} />, path: '/admin/order-history', module: 'orders' },
   { label: 'POS / New Sale', icon: <CreditCard size={20} />, path: '/admin/pos', module: 'pos' },
   { label: 'Payment Verification', icon: <CreditCard size={20} />, path: '/admin/payments', module: 'payment_verification' },
   { label: 'Menu Management', icon: <UtensilsCrossed size={20} />, path: '/admin/menu', module: 'menu' },

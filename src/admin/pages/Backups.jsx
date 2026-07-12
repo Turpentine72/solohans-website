@@ -10,7 +10,7 @@ function formatSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-const TYPE_LABEL = { manual: 'Manual', scheduled: 'Scheduled', 'pre-restore-safety': 'Pre-Restore Safety Snapshot' };
+const TYPE_LABEL = { manual: 'Manual', scheduled: 'Scheduled', 'pre-restore-safety': 'Pre-Restore Safety Snapshot', 'pre-reset-safety': 'Pre-Reset Safety Snapshot' };
 
 export default function Backups() {
   const { isSuperAdmin } = useAuth();
