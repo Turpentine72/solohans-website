@@ -722,7 +722,7 @@ export default function POS() {
                   <p className="text-green-700 text-xs">{result.order.discount_label || 'Discount'} applied: −₦{result.order.discount_amount.toLocaleString()}</p>
                 )}
                 <a
-                  href={`/receipt/${result.order._id}`}
+                  href={`/receipt/${result.order._id}?staff=1`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#C62828] hover:underline"

@@ -434,7 +434,7 @@ export default function Orders() {
                 <h3 className="text-xl font-bold">{getOrderId(selectedOrder)}</h3>
                 <div className="flex items-center gap-3">
                   <a
-                    href={`/receipt/${selectedOrder._id}`}
+                    href={`/receipt/${selectedOrder._id}?staff=1`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 text-xs font-semibold text-[#C62828] hover:underline"

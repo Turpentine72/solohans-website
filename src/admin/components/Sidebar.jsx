@@ -27,6 +27,7 @@ import {
   Receipt,
   Landmark,
   DatabaseBackup,
+  Clock,
 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
@@ -57,6 +58,7 @@ const navItems = [
   { label: 'Staff Management', icon: <UserCog size={20} />, path: '/admin/staff', module: 'staff' },
   { label: 'Roles & Permissions', icon: <ShieldCheck size={20} />, path: '/admin/roles-permissions', module: 'roles' },
   { label: 'Staff History', icon: <History size={20} />, path: '/admin/staff-history', module: 'staff_history' },
+  { label: 'Staff Activity', icon: <Clock size={20} />, path: '/admin/staff-activity', adminOnly: true },
   { label: 'Kitchen', icon: <ChefHat size={20} />, path: '/admin/kitchen', module: 'kitchen' },
   { label: 'My Deliveries', icon: <Truck size={20} />, path: '/admin/deliveries', module: 'delivery' },
   { label: 'Audit Log', icon: <History size={20} />, path: '/admin/audit-log', module: 'audit_log' },
@@ -70,7 +72,7 @@ const navItems = [
 export default function Sidebar({ isOpen, toggle }) {
   const location = useLocation();
   const { settings } = useSettings(); // ✅ dynamic settings
-  const { isSuperAdmin, hasPermission } = useAuth();
+  const { session, isSuperAdmin, hasPermission } = useAuth();
 
   // ✅ One clean rule per item — closes a real bug in the previous version,
   // where an item with ONLY a `roles` array (no `module`) was visible to
@@ -84,6 +86,7 @@ export default function Sidebar({ isOpen, toggle }) {
   const visibleNavItems = navItems.filter((item) => {
     if (isSuperAdmin) return true;
     if (item.superAdminOnly) return false;
+    if (item.adminOnly) return session?.role === 'admin';
     if (item.module) return hasPermission(item.module, 'view');
     return true;
   });

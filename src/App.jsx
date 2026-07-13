@@ -48,6 +48,7 @@ import OrderMeals from "./pages/OrderMeals";
 import AuditLog from "./admin/pages/AuditLog";
 import Profile from "./admin/pages/Profile";
 import StaffHistory from "./admin/pages/StaffHistory";
+import StaffActivity from "./admin/pages/StaffActivity";
 import RolesPermissions from "./admin/pages/RolesPermissions";
 import ChefDashboard from "./admin/pages/ChefDashboard";
 import DeliveryDashboard from "./admin/pages/DeliveryDashboard";
@@ -131,6 +132,7 @@ function App() {
                             <Route path="audit-log" element={<ProtectedRoute requiredPermission={{ module: 'audit_log', action: 'view' }}><AuditLog /></ProtectedRoute>} />
                             <Route path="profile" element={<Profile />} />
                             <Route path="staff-history" element={<ProtectedRoute requiredPermission={{ module: 'staff_history', action: 'view' }}><StaffHistory /></ProtectedRoute>} />
+                            <Route path="staff-activity" element={<ProtectedRoute allowedRoles={['admin']}><StaffActivity /></ProtectedRoute>} />
                             <Route path="roles-permissions" element={<ProtectedRoute requiredPermission={{ module: 'roles', action: 'view' }}><RolesPermissions /></ProtectedRoute>} />
                             <Route path="kitchen" element={<ProtectedRoute requiredPermission={{ module: 'kitchen', action: 'view' }}><ChefDashboard /></ProtectedRoute>} />
                             <Route path="deliveries" element={<ProtectedRoute requiredPermission={{ module: 'delivery', action: 'view' }}><DeliveryDashboard /></ProtectedRoute>} />

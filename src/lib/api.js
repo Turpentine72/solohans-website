@@ -180,6 +180,13 @@ export const backup = {
   },
 };
 
+export const staffActivity = {
+  get: (params = {}) => {
+    const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString();
+    return request(`/staff-activity${qs ? `?${qs}` : ''}`);
+  },
+};
+
 export const globalReset = {
   run: () => request('/reset/transactional-data', { method: 'POST', body: JSON.stringify({ confirm: 'RESET' }) }),
 };
@@ -243,6 +250,7 @@ export const orders = {
   },
   getOne: (id) => request(`/orders/${id}`),
   getReceipt: (id) => request(`/orders/receipt/${id}`),
+  logReceiptPrint: (id) => request(`/orders/${id}/log-receipt-print`, { method: 'POST' }).catch(() => {}), // best-effort, never blocks printing
   getHistory: (params = {}) => {
     const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString();
     return request(`/orders/history/unified${qs ? `?${qs}` : ''}`);

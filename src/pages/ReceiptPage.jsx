@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { orders as ordersApi } from '../lib/api';
 import { useSettings } from '../context/SettingsContext';
@@ -7,6 +7,8 @@ import Receipt from '../component/Receipt';
 
 export default function ReceiptPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const isStaffContext = searchParams.get('staff') === '1';
   const { settings } = useSettings();
   const [order, setOrder] = useState(null);
   const [error, setError] = useState('');
@@ -28,7 +30,7 @@ export default function ReceiptPage() {
         ) : error ? (
           <p className="text-center text-red-500">{error}</p>
         ) : (
-          <Receipt order={order} business={settings} />
+          <Receipt order={order} business={settings} trackPrint={isStaffContext} />
         )}
       </div>
     </>

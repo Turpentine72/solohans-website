@@ -1,5 +1,6 @@
 import { Printer, Share2, Link as LinkIcon, Check } from 'lucide-react';
 import { useState } from 'react';
+import { orders as ordersApi } from '../lib/api';
 
 const naira = (n) => `₦${Number(n || 0).toLocaleString('en-NG')}`;
 
@@ -11,7 +12,7 @@ function lineItems(order) {
   return rows;
 }
 
-export default function Receipt({ order, business, showActions = true }) {
+export default function Receipt({ order, business, showActions = true, trackPrint = false }) {
   const [copied, setCopied] = useState(false);
   if (!order) return null;
 
@@ -19,7 +20,13 @@ export default function Receipt({ order, business, showActions = true }) {
   const dateObj = new Date(order.createdAt);
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/receipt/${order._id}` : '';
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    window.print();
+    // Only logs when opened from an admin context (?staff=1) AND there's
+    // an actual staff session — a customer following their own receipt
+    // link has no auth token, so this silently no-ops for them.
+    if (trackPrint) ordersApi.logReceiptPrint(order._id);
+  };
 
   const handleShare = async () => {
     if (navigator.share) {

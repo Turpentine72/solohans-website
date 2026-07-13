@@ -254,7 +254,7 @@ export default function OrderHistory() {
                       <div className="flex items-center gap-3 shrink-0">
                         <span className="font-bold text-gray-800">{naira(o.totalAmount)}</span>
                         <button onClick={() => setDetailOrder(o)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg" title="View Details"><Eye size={16} /></button>
-                        <a href={`/receipt/${o._id}`} target="_blank" rel="noopener noreferrer" className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg" title="View / Print / Download Receipt"><Receipt size={16} /></a>
+                        <a href={`/receipt/${o._id}?staff=1`} target="_blank" rel="noopener noreferrer" className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg" title="View / Print / Download Receipt"><Receipt size={16} /></a>
                       </div>
                     </div>
                   ))}
@@ -294,7 +294,7 @@ export default function OrderHistory() {
                 </div>
               </div>
               <div className="p-5 border-t">
-                <a href={`/receipt/${detailOrder._id}`} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-center gap-2 bg-[#C62828] text-white py-2.5 rounded-full font-semibold hover:bg-[#B71C1C]">
+                <a href={`/receipt/${detailOrder._id}?staff=1`} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-center gap-2 bg-[#C62828] text-white py-2.5 rounded-full font-semibold hover:bg-[#B71C1C]">
                   <Receipt size={16} /> View / Print / Download Receipt
                 </a>
               </div>
