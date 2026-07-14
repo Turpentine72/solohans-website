@@ -4,7 +4,7 @@ import {
   Search, Eye, X, CreditCard, AlertTriangle, History,
   Trash2, RefreshCw, Calendar, ArrowRight,
   Banknote, ArrowLeftRight, Globe, Store, UtensilsCrossed, Truck, Home, Receipt, FileText, SplitSquareHorizontal,
-  CheckCircle, Clock, Lock, UserCircle,
+  CheckCircle, Clock, Lock, UserCircle, Bike,
 } from 'lucide-react';
 import { orders as ordersApi, payments as paymentsApi } from '../../lib/api';
 import { PAYMENT_TAGS } from '../../lib/pricing';
@@ -13,6 +13,16 @@ import { useNavigate } from 'react-router-dom';
 const PAYMENT_TAG_ICONS = { Banknote, ArrowLeftRight, CreditCard, Globe, SplitSquareHorizontal };
 
 function PaymentTagBadge({ order }) {
+  // ✅ Never show the generic 'PLATFORM PAYMENT' label — show exactly
+  // which platform (Glovo, Chowdeck, Uber Eats, Other) the order came
+  // from instead.
+  if (order.paymentMethod === 'PLATFORM') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap bg-indigo-100 text-indigo-700">
+        <Bike size={12} /> {order.platform || 'Platform'}
+      </span>
+    );
+  }
   const tag = PAYMENT_TAGS[order.paymentMethod] || PAYMENT_TAGS['WEBSITE PAYMENT'];
   const Icon = PAYMENT_TAG_ICONS[tag.icon] || CreditCard;
   return (

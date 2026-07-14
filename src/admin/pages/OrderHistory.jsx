@@ -9,12 +9,25 @@ const PAYMENT_METHODS = [
   { value: 'TRANSFER', label: 'Transfer' },
   { value: 'POS', label: 'POS' },
   { value: 'WEBSITE PAYMENT', label: 'Website' },
-  { value: 'PLATFORM', label: 'Glovo/Chowdeck (Platform)' },
   { value: 'SPLIT', label: 'Split Payment' },
 ];
+// Glovo/Chowdeck/etc are filtered via `source`, not `paymentMethod` — see
+// the Source dropdown below, which already targets a specific platform
+// directly rather than lumping them under one generic payment method.
 
 const naira = (n) => `₦${Number(n || 0).toLocaleString('en-NG')}`;
 const toDateKey = (d) => d.toISOString().slice(0, 10);
+
+// ✅ Never show the generic 'PLATFORM' label — show the actual platform
+// (Glovo, Chowdeck, Uber Eats, Other) it came from instead.
+function paymentDisplay(order) {
+  if (order.paymentMethod === 'PLATFORM') return order.platform || 'Platform';
+  if (order.paymentMethod === 'WEBSITE PAYMENT') return 'Website';
+  if (order.paymentMethod === 'SPLIT') return 'Split Payment';
+  return order.paymentMethod
+    ? order.paymentMethod.charAt(0) + order.paymentMethod.slice(1).toLowerCase()
+    : '—';
+}
 
 function startOfWeek() {
   const d = new Date();
@@ -248,7 +261,7 @@ export default function OrderHistory() {
                           {orderLineItems(o).map((li) => `${li.name}${li.qty > 1 ? ` ×${li.qty}` : ''}`).join(', ') || '—'}
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5">
-                          {o.customerName || 'Walk-in customer'} · Staff: {o.staffNameSnapshot || '—'} · {o.paymentMethod}
+                          {o.customerName || 'Walk-in customer'} · Staff: {o.staffNameSnapshot || '—'} · {paymentDisplay(o)}
                         </p>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
@@ -275,7 +288,7 @@ export default function OrderHistory() {
               <div className="p-5 space-y-3 text-sm">
                 <div className="grid grid-cols-2 gap-2">
                   <div><p className="text-gray-400 text-xs">Source</p><p className="font-medium">{detailOrder._source}</p></div>
-                  <div><p className="text-gray-400 text-xs">Payment Method</p><p className="font-medium">{detailOrder.paymentMethod}</p></div>
+                  <div><p className="text-gray-400 text-xs">Payment Method</p><p className="font-medium">{paymentDisplay(detailOrder)}</p></div>
                   <div><p className="text-gray-400 text-xs">Customer</p><p className="font-medium">{detailOrder.customerName || 'Walk-in'}</p></div>
                   <div><p className="text-gray-400 text-xs">Staff</p><p className="font-medium">{detailOrder.staffNameSnapshot || '—'}</p></div>
                   <div><p className="text-gray-400 text-xs">Payment Status</p><p className="font-medium capitalize">{detailOrder.payment_status}</p></div>

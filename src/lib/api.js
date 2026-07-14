@@ -142,7 +142,7 @@ export const websiteCheckout = {
 // separate from the original per-menu-item `reconciliation` below ─────────
 export const paymentReconciliation = {
   getExpected: () => request('/payment-reconciliation/expected'),
-  closeDay: (actualCounts) => request('/payment-reconciliation/close-day', { method: 'POST', body: JSON.stringify({ actualCounts }) }),
+  closeDay: (actualCounts, notes) => request('/payment-reconciliation/close-day', { method: 'POST', body: JSON.stringify({ actualCounts, notes }) }),
   getHistory: () => request('/payment-reconciliation/history'),
 };
 

@@ -14,6 +14,7 @@ export default function PaymentReconciliation() {
   const [expected, setExpected] = useState(null);
   const [actual, setActual] = useState({ cashTotal: '', transferTotal: '', posTotal: '', websitePaymentTotal: '' });
   const [platformActuals, setPlatformActuals] = useState({}); // { Glovo: '5000', Chowdeck: '3200', ... }
+  const [notes, setNotes] = useState({}); // keyed by channel: 'cashTotal', 'transferTotal', ..., 'Glovo', 'Chowdeck', ...
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [closing, setClosing] = useState(false);
@@ -49,7 +50,7 @@ export default function PaymentReconciliation() {
           platformKeys.map((p) => [p, Number(platformActuals[p]) || 0])
         ),
       };
-      const res = await reconciliationApi.closeDay(actualCounts);
+      const res = await reconciliationApi.closeDay(actualCounts, notes);
       setResult(res);
       fetchData();
     } catch (err) {
@@ -75,10 +76,10 @@ export default function PaymentReconciliation() {
             {expected.closedRecord && (
               <div className="mt-4 text-sm text-left max-w-md mx-auto space-y-1">
                 {FIELDS.map((f) => (
-                  <p key={f.key}>{f.label} ({expected.closedRecord.expected[f.countKey] || 0} txns): expected ₦{expected.closedRecord.expected[f.key].toLocaleString()}, actual ₦{expected.closedRecord.actual[f.key].toLocaleString()} (variance {expected.closedRecord.variance[f.key] >= 0 ? '+' : ''}₦{expected.closedRecord.variance[f.key].toLocaleString()})</p>
+                  <p key={f.key}>{f.label} ({expected.closedRecord.expected[f.countKey] || 0} txns): expected ₦{expected.closedRecord.expected[f.key].toLocaleString()}, actual ₦{expected.closedRecord.actual[f.key].toLocaleString()} (variance {expected.closedRecord.variance[f.key] >= 0 ? '+' : ''}₦{expected.closedRecord.variance[f.key].toLocaleString()}){expected.closedRecord.notes?.[f.key] ? ` — ${expected.closedRecord.notes[f.key]}` : ''}</p>
                 ))}
                 {Object.entries(expected.closedRecord.platformBreakdown || {}).map(([platform, v]) => (
-                  <p key={platform}>{platform} ({v.count || 0} txns): expected ₦{v.expected.toLocaleString()}, actual ₦{v.actual.toLocaleString()} (variance {v.variance >= 0 ? '+' : ''}₦{v.variance.toLocaleString()})</p>
+                  <p key={platform}>{platform} ({v.count || 0} txns): expected ₦{v.expected.toLocaleString()}, actual ₦{v.actual.toLocaleString()} (variance {v.variance >= 0 ? '+' : ''}₦{v.variance.toLocaleString()}){expected.closedRecord.notes?.[platform] ? ` — ${expected.closedRecord.notes[platform]}` : ''}</p>
                 ))}
               </div>
             )}
@@ -93,6 +94,7 @@ export default function PaymentReconciliation() {
                     <th className="py-3 px-4">Transactions</th>
                     <th className="py-3 px-4">Expected (System)</th>
                     <th className="py-3 px-4">Actual (Physical / Account Count)</th>
+                    <th className="py-3 px-4">Notes</th>
                     <th className="py-3 px-4">Compare With</th>
                   </tr>
                 </thead>
@@ -110,6 +112,15 @@ export default function PaymentReconciliation() {
                           onChange={(e) => setActual({ ...actual, [f.key]: e.target.value })}
                           placeholder="0"
                           className="w-32 px-3 py-1.5 border rounded-lg"
+                        />
+                      </td>
+                      <td className="py-3 px-4">
+                        <input
+                          type="text"
+                          value={notes[f.key] || ''}
+                          onChange={(e) => setNotes({ ...notes, [f.key]: e.target.value })}
+                          placeholder="Optional — explain any variance"
+                          className="w-40 px-3 py-1.5 border rounded-lg text-sm"
                         />
                       </td>
                       <td className="py-3 px-4 text-xs text-gray-400">{f.hint}</td>
@@ -138,6 +149,15 @@ export default function PaymentReconciliation() {
                           className="w-32 px-3 py-1.5 border rounded-lg"
                         />
                       </td>
+                      <td className="py-3 px-4">
+                        <input
+                          type="text"
+                          value={notes[platform] || ''}
+                          onChange={(e) => setNotes({ ...notes, [platform]: e.target.value })}
+                          placeholder="Optional — explain any variance"
+                          className="w-40 px-3 py-1.5 border rounded-lg text-sm"
+                        />
+                      </td>
                       <td className="py-3 px-4 text-xs text-gray-400">Compare with {platform} statement/dashboard</td>
                     </tr>
                   ))}
@@ -145,7 +165,7 @@ export default function PaymentReconciliation() {
                     <td className="py-3 px-4">Total Sales</td>
                     <td colSpan="1"></td>
                     <td className="py-3 px-4">₦{(expected?.expected?.totalSales || 0).toLocaleString()}</td>
-                    <td colSpan="2"></td>
+                    <td colSpan="3"></td>
                   </tr>
                 </tbody>
               </table>
@@ -166,13 +186,13 @@ export default function PaymentReconciliation() {
               {FIELDS.map((f) => (
                 <li key={f.key} className={result.variance[f.key] !== 0 ? 'text-amber-700 flex items-center gap-1' : ''}>
                   {result.variance[f.key] !== 0 && <AlertTriangle size={14} />}
-                  {f.label}: expected ₦{result.expected[f.key].toLocaleString()}, actual ₦{result.actual[f.key].toLocaleString()} ({result.variance[f.key] >= 0 ? '+' : ''}₦{result.variance[f.key].toLocaleString()})
+                  {f.label}: expected ₦{result.expected[f.key].toLocaleString()}, actual ₦{result.actual[f.key].toLocaleString()} ({result.variance[f.key] >= 0 ? '+' : ''}₦{result.variance[f.key].toLocaleString()}){result.notes?.[f.key] ? ` — ${result.notes[f.key]}` : ''}
                 </li>
               ))}
               {Object.entries(result.platformBreakdown || {}).map(([platform, v]) => (
                 <li key={platform} className={v.variance !== 0 ? 'text-amber-700 flex items-center gap-1' : ''}>
                   {v.variance !== 0 && <AlertTriangle size={14} />}
-                  {platform}: expected ₦{v.expected.toLocaleString()}, actual ₦{v.actual.toLocaleString()} ({v.variance >= 0 ? '+' : ''}₦{v.variance.toLocaleString()})
+                  {platform}: expected ₦{v.expected.toLocaleString()}, actual ₦{v.actual.toLocaleString()} ({v.variance >= 0 ? '+' : ''}₦{v.variance.toLocaleString()}){result.notes?.[platform] ? ` — ${result.notes[platform]}` : ''}
                 </li>
               ))}
             </ul>
