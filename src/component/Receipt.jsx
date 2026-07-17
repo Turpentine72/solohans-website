@@ -1,6 +1,7 @@
-import { Printer, Share2, Link as LinkIcon, Check } from 'lucide-react';
+import { Printer, Share2, Link as LinkIcon, Check, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
 import { orders as ordersApi } from '../lib/api';
+import { printReceiptToThermalPrinter } from '../lib/qzPrint';
 
 const naira = (n) => `₦${Number(n || 0).toLocaleString('en-NG')}`;
 
@@ -14,6 +15,8 @@ function lineItems(order) {
 
 export default function Receipt({ order, business, showActions = true, trackPrint = false }) {
   const [copied, setCopied] = useState(false);
+  const [thermalPrinting, setThermalPrinting] = useState(false);
+  const [thermalError, setThermalError] = useState('');
   if (!order) return null;
 
   const items = lineItems(order);
@@ -26,6 +29,19 @@ export default function Receipt({ order, business, showActions = true, trackPrin
     // an actual staff session — a customer following their own receipt
     // link has no auth token, so this silently no-ops for them.
     if (trackPrint) ordersApi.logReceiptPrint(order._id);
+  };
+
+  const handleThermalPrint = async () => {
+    setThermalError('');
+    setThermalPrinting(true);
+    try {
+      await printReceiptToThermalPrinter(order, business);
+      if (trackPrint) ordersApi.logReceiptPrint(order._id);
+    } catch (err) {
+      setThermalError(err.message || 'Thermal print failed.');
+    } finally {
+      setThermalPrinting(false);
+    }
   };
 
   const handleShare = async () => {
@@ -44,19 +60,37 @@ export default function Receipt({ order, business, showActions = true, trackPrin
     <div className="max-w-md mx-auto">
       <style>{`
         @media print {
+          @page { size: 58mm auto; margin: 0; }
           body * { visibility: hidden; }
           .receipt-printable, .receipt-printable * { visibility: visible; }
-          .receipt-printable { position: absolute; top: 0; left: 0; width: 100%; box-shadow: none; border: none; }
+          .receipt-printable {
+            position: absolute; top: 0; left: 0;
+            width: 58mm; max-width: 58mm;
+            box-shadow: none; border: none; border-radius: 0;
+            padding: 2mm 3mm;
+            font-size: 10px; line-height: 1.35;
+          }
+          .receipt-printable img { max-height: 12mm; }
         }
       `}</style>
       {showActions && (
-        <div className="flex gap-2 mb-4 print:hidden">
-          <button onClick={handlePrint} className="flex-1 flex items-center justify-center gap-2 bg-[#C62828] text-white py-2.5 rounded-full font-semibold text-sm hover:bg-[#B71C1C]">
-            <Printer size={16} /> Print / Save as PDF
+        <div className="mb-4 print:hidden">
+          <div className="flex gap-2 mb-2">
+            <button onClick={handlePrint} className="flex-1 flex items-center justify-center gap-2 bg-[#C62828] text-white py-2.5 rounded-full font-semibold text-sm hover:bg-[#B71C1C]">
+              <Printer size={16} /> Print / Save as PDF
+            </button>
+            <button onClick={handleShare} className="flex-1 flex items-center justify-center gap-2 border border-gray-200 py-2.5 rounded-full font-semibold text-sm hover:bg-gray-50">
+              {copied ? <><Check size={16} /> Link Copied</> : navigator.share ? <><Share2 size={16} /> Share</> : <><LinkIcon size={16} /> Copy Link</>}
+            </button>
+          </div>
+          <button onClick={handleThermalPrint} disabled={thermalPrinting} className="w-full flex items-center justify-center gap-2 border border-gray-200 py-2.5 rounded-full font-semibold text-sm hover:bg-gray-50 disabled:opacity-60">
+            <Printer size={16} /> {thermalPrinting ? 'Printing…' : 'Print to Thermal Printer (MP58-15)'}
           </button>
-          <button onClick={handleShare} className="flex-1 flex items-center justify-center gap-2 border border-gray-200 py-2.5 rounded-full font-semibold text-sm hover:bg-gray-50">
-            {copied ? <><Check size={16} /> Link Copied</> : navigator.share ? <><Share2 size={16} /> Share</> : <><LinkIcon size={16} /> Copy Link</>}
-          </button>
+          {thermalError && (
+            <p className="flex items-start gap-1.5 text-xs text-amber-600 mt-2">
+              <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" /> {thermalError}
+            </p>
+          )}
         </div>
       )}
 
@@ -121,6 +155,7 @@ export default function Receipt({ order, business, showActions = true, trackPrin
         <div className="text-xs space-y-0.5">
           <div className="flex justify-between"><span className="text-gray-500">Payment Method</span><span>{order.paymentMethod || '—'}</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Payment Status</span><span className={order.payment_status === 'paid' ? 'text-green-600 font-semibold' : 'text-amber-600 font-semibold'}>{order.payment_status || 'unpaid'}</span></div>
+          {order.status && <div className="flex justify-between"><span className="text-gray-500">Order Status</span><span className="font-semibold">{order.status}</span></div>}
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-5">Thank you for choosing {business?.name || 'Solohans Delicious Meals'}! 🙏</p>
