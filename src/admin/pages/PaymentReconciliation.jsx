@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { CheckCircle2, AlertTriangle, Lock, Banknote, ArrowLeftRight, CreditCard, Globe, Bike } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Lock, Banknote, ArrowLeftRight, CreditCard, Globe, Bike, Download } from 'lucide-react';
 import { paymentReconciliation as reconciliationApi } from '../../lib/api';
 
 const FIELDS = [
@@ -38,6 +38,26 @@ export default function PaymentReconciliation() {
   };
 
   const handleCloseDay = async () => {
+    // ✅ Error Detection — any channel where actual ≠ expected MUST have a
+    // note explaining it before the day can be closed. This is enforced
+    // here (not just visually) so a shortage/excess can never be silently
+    // submitted without an explanation.
+    const problems = [];
+    FIELDS.forEach((f) => {
+      const exp = expected?.expected?.[f.key] || 0;
+      const act = Number(actual[f.key]) || 0;
+      if (act !== exp && !notes[f.key]?.trim()) problems.push(f.label);
+    });
+    platformKeys.forEach((platform) => {
+      const exp = expected.platformBreakdown[platform]?.total || 0;
+      const act = Number(platformActuals[platform]) || 0;
+      if (act !== exp && !notes[platform]?.trim()) problems.push(platform);
+    });
+    if (problems.length > 0) {
+      alert(`Add a note explaining the shortage/excess for: ${problems.join(', ')}. A reason is required before closing the day whenever the actual amount doesn't match what the system expects.`);
+      return;
+    }
+
     if (!window.confirm('Close today\'s reconciliation? This cannot be undone.')) return;
     setClosing(true);
     try {
@@ -58,6 +78,27 @@ export default function PaymentReconciliation() {
     } finally {
       setClosing(false);
     }
+  };
+
+  const handleExportCSV = () => {
+    const rows = [['Date', 'Payment Method', 'Expected', 'Actual', 'Difference', 'Status', 'Staff', 'Notes']];
+    history.forEach((r) => {
+      FIELDS.forEach((f) => {
+        const exp = r.expected[f.key]; const act = r.actual[f.key]; const diff = r.variance[f.key];
+        rows.push([r.date, f.label, exp, act, diff, diff === 0 ? 'Balanced' : (diff > 0 ? 'Excess' : 'Shortage'), r.closedBy || '', r.notes?.[f.key] || '']);
+      });
+      Object.entries(r.platformBreakdown || {}).forEach(([platform, v]) => {
+        rows.push([r.date, platform, v.expected, v.actual, v.variance, v.variance === 0 ? 'Balanced' : (v.variance > 0 ? 'Excess' : 'Shortage'), r.closedBy || '', r.notes?.[platform] || '']);
+      });
+    });
+    const csv = rows.map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'payment-reconciliation-history.csv';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -99,33 +140,44 @@ export default function PaymentReconciliation() {
                   </tr>
                 </thead>
                 <tbody>
-                  {FIELDS.map((f) => (
-                    <tr key={f.key} className="border-t border-gray-100">
-                      <td className="py-3 px-4 font-medium text-gray-800 flex items-center gap-2"><f.icon size={16} className={f.iconColor} /> {f.label}</td>
-                      <td className="py-3 px-4 text-gray-500">{expected?.expected?.[f.countKey] || 0}</td>
-                      <td className="py-3 px-4">₦{(expected?.expected?.[f.key] || 0).toLocaleString()}</td>
-                      <td className="py-3 px-4">
-                        <input
-                          type="number"
-                          min="0"
-                          value={actual[f.key]}
-                          onChange={(e) => setActual({ ...actual, [f.key]: e.target.value })}
-                          placeholder="0"
-                          className="w-32 px-3 py-1.5 border rounded-lg"
-                        />
-                      </td>
-                      <td className="py-3 px-4">
-                        <input
-                          type="text"
-                          value={notes[f.key] || ''}
-                          onChange={(e) => setNotes({ ...notes, [f.key]: e.target.value })}
-                          placeholder="Optional — explain any variance"
-                          className="w-40 px-3 py-1.5 border rounded-lg text-sm"
-                        />
-                      </td>
-                      <td className="py-3 px-4 text-xs text-gray-400">{f.hint}</td>
-                    </tr>
-                  ))}
+                  {FIELDS.map((f) => {
+                    const exp = expected?.expected?.[f.key] || 0;
+                    const act = actual[f.key] === '' ? null : Number(actual[f.key]) || 0;
+                    const mismatch = act !== null && act !== exp;
+                    const needsNote = mismatch && !notes[f.key]?.trim();
+                    return (
+                      <tr key={f.key} className={`border-t border-gray-100 ${mismatch ? 'bg-red-50/50' : ''}`}>
+                        <td className="py-3 px-4 font-medium text-gray-800 flex items-center gap-2"><f.icon size={16} className={f.iconColor} /> {f.label}</td>
+                        <td className="py-3 px-4 text-gray-500">{expected?.expected?.[f.countKey] || 0}</td>
+                        <td className="py-3 px-4">₦{exp.toLocaleString()}</td>
+                        <td className="py-3 px-4">
+                          <input
+                            type="number"
+                            min="0"
+                            value={actual[f.key]}
+                            onChange={(e) => setActual({ ...actual, [f.key]: e.target.value })}
+                            placeholder="0"
+                            className={`w-32 px-3 py-1.5 border rounded-lg ${mismatch ? 'border-red-300' : ''}`}
+                          />
+                          {mismatch && (
+                            <p className="flex items-center gap-1 text-xs text-red-600 mt-1">
+                              <AlertTriangle size={12} /> {act > exp ? 'Excess' : 'Shortage'}: ₦{Math.abs(act - exp).toLocaleString()}
+                            </p>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <input
+                            type="text"
+                            value={notes[f.key] || ''}
+                            onChange={(e) => setNotes({ ...notes, [f.key]: e.target.value })}
+                            placeholder={mismatch ? 'Required — explain the variance' : 'Optional'}
+                            className={`w-40 px-3 py-1.5 border rounded-lg text-sm ${needsNote ? 'border-red-400 bg-red-50' : ''}`}
+                          />
+                        </td>
+                        <td className="py-3 px-4 text-xs text-gray-400">{f.hint}</td>
+                      </tr>
+                    );
+                  })}
                   {/* ✅ Third-party delivery platforms — Glovo, Chowdeck, Uber Eats,
                       and Other are ALWAYS shown here, even at ₦0 / 0 transactions,
                       so a platform never disappears from view just because it had
@@ -134,33 +186,44 @@ export default function PaymentReconciliation() {
                       change needed. "Actual" here is what the platform's own
                       dashboard/settlement statement shows, so this catches a
                       platform under/over-paying versus what was rung up at POS. */}
-                  {platformKeys.map((platform) => (
-                    <tr key={platform} className="border-t border-gray-100 bg-indigo-50/40">
-                      <td className="py-3 px-4 font-medium text-gray-800 flex items-center gap-2"><Bike size={16} className="text-indigo-600" /> {platform}</td>
-                      <td className="py-3 px-4 text-gray-500">{expected.platformBreakdown[platform]?.count || 0}</td>
-                      <td className="py-3 px-4">₦{(expected.platformBreakdown[platform]?.total || 0).toLocaleString()}</td>
-                      <td className="py-3 px-4">
-                        <input
-                          type="number"
-                          min="0"
-                          value={platformActuals[platform] || ''}
-                          onChange={(e) => setPlatformActuals({ ...platformActuals, [platform]: e.target.value })}
-                          placeholder="0"
-                          className="w-32 px-3 py-1.5 border rounded-lg"
-                        />
-                      </td>
-                      <td className="py-3 px-4">
-                        <input
-                          type="text"
-                          value={notes[platform] || ''}
-                          onChange={(e) => setNotes({ ...notes, [platform]: e.target.value })}
-                          placeholder="Optional — explain any variance"
-                          className="w-40 px-3 py-1.5 border rounded-lg text-sm"
-                        />
-                      </td>
-                      <td className="py-3 px-4 text-xs text-gray-400">Compare with {platform} statement/dashboard</td>
-                    </tr>
-                  ))}
+                  {platformKeys.map((platform) => {
+                    const exp = expected.platformBreakdown[platform]?.total || 0;
+                    const act = !platformActuals[platform] ? null : Number(platformActuals[platform]) || 0;
+                    const mismatch = act !== null && act !== exp;
+                    const needsNote = mismatch && !notes[platform]?.trim();
+                    return (
+                      <tr key={platform} className={`border-t border-gray-100 ${mismatch ? 'bg-red-50/50' : 'bg-indigo-50/40'}`}>
+                        <td className="py-3 px-4 font-medium text-gray-800 flex items-center gap-2"><Bike size={16} className="text-indigo-600" /> {platform}</td>
+                        <td className="py-3 px-4 text-gray-500">{expected.platformBreakdown[platform]?.count || 0}</td>
+                        <td className="py-3 px-4">₦{exp.toLocaleString()}</td>
+                        <td className="py-3 px-4">
+                          <input
+                            type="number"
+                            min="0"
+                            value={platformActuals[platform] || ''}
+                            onChange={(e) => setPlatformActuals({ ...platformActuals, [platform]: e.target.value })}
+                            placeholder="0"
+                            className={`w-32 px-3 py-1.5 border rounded-lg ${mismatch ? 'border-red-300' : ''}`}
+                          />
+                          {mismatch && (
+                            <p className="flex items-center gap-1 text-xs text-red-600 mt-1">
+                              <AlertTriangle size={12} /> {act > exp ? 'Excess' : 'Shortage'}: ₦{Math.abs(act - exp).toLocaleString()}
+                            </p>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <input
+                            type="text"
+                            value={notes[platform] || ''}
+                            onChange={(e) => setNotes({ ...notes, [platform]: e.target.value })}
+                            placeholder={mismatch ? 'Required — explain the variance' : 'Optional'}
+                            className={`w-40 px-3 py-1.5 border rounded-lg text-sm ${needsNote ? 'border-red-400 bg-red-50' : ''}`}
+                          />
+                        </td>
+                        <td className="py-3 px-4 text-xs text-gray-400">Compare with {platform} statement/dashboard</td>
+                      </tr>
+                    );
+                  })}
                   <tr className="border-t border-gray-200 bg-gray-50 font-semibold">
                     <td className="py-3 px-4">Total Sales</td>
                     <td colSpan="1"></td>
@@ -201,7 +264,12 @@ export default function PaymentReconciliation() {
 
         {history.length > 0 && (
           <div className="mt-10">
-            <h2 className="text-xl font-bold text-gray-800 mb-3">Past Reconciliations</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xl font-bold text-gray-800">Past Reconciliations</h2>
+              <button onClick={handleExportCSV} className="flex items-center gap-2 border border-gray-200 text-gray-600 px-4 py-2 rounded-full text-sm font-semibold hover:bg-gray-50">
+                <Download size={15} /> Export CSV
+              </button>
+            </div>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-gray-50 text-gray-500 text-sm">
